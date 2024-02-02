@@ -10,6 +10,7 @@ library(tidyverse)
 library(broom)
 library(stringr)
 library(sf)
+library(ggspatial)
 library(readxl)
 ```
 
@@ -22,11 +23,11 @@ library(readxl)
 
 ### Load Datafiles from GitHub Repository
 ```{r}
-plots <- read_csv("data/hf131-01-plot.csv")
-cwd <- read_csv("data/hf131_03-cwd.csv")
-aco <- read_csv("data/hf131-04-aco.csv")
-pc <- read_csv("data/hf131-05-pc-abund.csv")
-herps <- read_csv("data/hf131-06-herps.csv")
+plots <- read_csv("/cloud/project/data/hf131-01-plot.csv")
+cwd <- read_csv("/cloud/project/data/hf131-03-cwd.csv")
+aco <- read_csv("/cloud/project/data/hf131-04-aco.csv")
+pc <- read_csv("/cloud/project/data/hf131-05-pc-abund.csv")
+herps <- read_csv("/cloud/project/data/hf131-06-herps.csv")
 ```
 
 ```{r}
@@ -38,65 +39,78 @@ glimpse(pc)
 glimpse(herps)
 ```
 
-### Modify lat/long Strings
-
-```{r}
-dms_to_decimal <- function(degrees, minutes, seconds, hemisphere) {
-  decimal <- degrees + minutes / 60 + seconds / 3600
-  if (hemisphere %in% c('S', 'W')) {
-    decimal <- -decimal
-  }
-  return(decimal)
-}
-
-#from: https://community.rstudio.com/t/geom-sf-how-to-get-decimal-degrees-on-my-longitude-and-latitude-axes/177204/5
-```
-
+### Convert degrees, minutes, seconds to decimal degrees
 
 
 ```{r}
-plots$lat <- with(plots, mapply(dms_to_decimal, Lat_Deg, Lat_Min, Lat_Sec, Lat_Hem))
-plots$long <- with(plots, mapply(dms_to_decimal, Long_Deg, Long_Min, Long_Sec, Long_Hem))
-```
-
-```{r}
+#latitude
 plots <- plots %>%
   mutate(lat = str_replace_all(lat, "\xb0", ":"))
-
-#plots <- plots %>%
-#  mutate(lat = str_replace_all(lat, "\\.", ":"))
 
 plots <- plots %>%
   mutate(lat = str_remove_all(lat, "N"))
 
 plots <- plots %>%
   mutate(lat = str_remove_all(lat, "'"))
-```
 
-```{r}
+plots <- plots %>%
+  mutate(lat = str_squish(lat))
+
+#longitude
 plots <- plots %>%
   mutate(long = str_replace_all(long, "\xb0", ":"))
-
-#plots <- plots %>%
-#  mutate(long = str_replace_all(long, "\\.", ":"))
 
 plots <- plots %>%
   mutate(long = str_remove_all(long, "W"))
 
 plots <- plots %>%
   mutate(long = str_remove_all(long, "'"))
+
+plots <- plots %>%
+  mutate(long = str_squish(long))
 ```
 
-### Convert hms to decimal degrees
 ```{r}
-#chd = substr(plots$lat, 3, 3)[1]
-#chm = substr(plots$lat, 6, 6)[1]
-#chs = substr(plots$lat, 9, 9)[1]
+#extract values to create separate columns for degrees, decimal minutes, and hemisphere
 
-#plots$lat <- char2dms(plots$lat, chd=chd, chm=chm, chs=chs)
+
+plots <- plots %>%
+  mutate(lat_deg = str_extract_all(plots$lat, "..(?=:)"),
+         lat_dm = str_extract_all(plots$lat, "(?<=:)......"),
+         long_deg = str_extract_all(plots$long, "..(?=:)"),
+         long_dm = str_extract_all(plots$long, "(?<=:)......"))
+
+plots$lat_deg <- as.numeric(plots$lat_deg)
+plots$lat_dm <- as.numeric(plots$lat_dm)
+plots$long_deg <- as.numeric(plots$long_deg)
+plots$long_dm <- as.numeric(plots$long_dm)
+```
+decimal degrees=d+m/60+s/3600
+
+```{r}
+lattest = 42 + 29.275 / 60
+	
+longtest = 71 + 53.891 / 60
+```
+seems to be a plausible location, right around HF in Petersham.
+
+```{r}
+coords <- plots %>%
+  select(lat_deg, lat_dm, long_deg, long_dm) %>%
+  mutate(lat_dd = lat_deg + lat_dm / 60,
+         long_dd = long_deg + long_dm / 60)
+
+coords$long_dd <- coords$long_dd*(-1)
 ```
 
-
+```{r}
+coords %>%
+  ggplot(aes(x = long_dd, y = lat_dd)) +
+  geom_point()
+```
+```{r}
+mass_towns <- st_read("/cloud/project/data/Community Boundaries (Towns) from Survey Points.shp")
+```
 
 ### Exploratory Visualizations
 
