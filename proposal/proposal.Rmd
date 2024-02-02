@@ -1,12 +1,16 @@
 ---
-title: "Project proposal"
-author: "Team name"
+title: "Red-backed salamander abundance and distribution in north-central Massachusetts"
+author: "Joshua A. Harkness"
+date: "2024-02-02"
 output: github_document
 ---
 
 ```{r load-packages, message = FALSE}
 library(tidyverse)
 library(broom)
+library(stringr)
+library(sf)
+library(readxl)
 ```
 
 ## 1. Introduction
@@ -14,6 +18,144 @@ library(broom)
 
 
 ## 2. Data
+### Load Packages
+
+### Load Datafiles from GitHub Repository
+```{r}
+plots <- read_csv("data/hf131-01-plot.csv")
+cwd <- read_csv("data/hf131_03-cwd.csv")
+aco <- read_csv("data/hf131-04-aco.csv")
+pc <- read_csv("data/hf131-05-pc-abund.csv")
+herps <- read_csv("data/hf131-06-herps.csv")
+```
+
+```{r}
+#Plots
+glimpse(plots)
+#ACO
+glimpse(aco)
+glimpse(pc)
+glimpse(herps)
+```
+
+### Modify lat/long Strings
+
+```{r}
+dms_to_decimal <- function(degrees, minutes, seconds, hemisphere) {
+  decimal <- degrees + minutes / 60 + seconds / 3600
+  if (hemisphere %in% c('S', 'W')) {
+    decimal <- -decimal
+  }
+  return(decimal)
+}
+
+#from: https://community.rstudio.com/t/geom-sf-how-to-get-decimal-degrees-on-my-longitude-and-latitude-axes/177204/5
+```
+
+
+
+```{r}
+plots$lat <- with(plots, mapply(dms_to_decimal, Lat_Deg, Lat_Min, Lat_Sec, Lat_Hem))
+plots$long <- with(plots, mapply(dms_to_decimal, Long_Deg, Long_Min, Long_Sec, Long_Hem))
+```
+
+```{r}
+plots <- plots %>%
+  mutate(lat = str_replace_all(lat, "\xb0", ":"))
+
+#plots <- plots %>%
+#  mutate(lat = str_replace_all(lat, "\\.", ":"))
+
+plots <- plots %>%
+  mutate(lat = str_remove_all(lat, "N"))
+
+plots <- plots %>%
+  mutate(lat = str_remove_all(lat, "'"))
+```
+
+```{r}
+plots <- plots %>%
+  mutate(long = str_replace_all(long, "\xb0", ":"))
+
+#plots <- plots %>%
+#  mutate(long = str_replace_all(long, "\\.", ":"))
+
+plots <- plots %>%
+  mutate(long = str_remove_all(long, "W"))
+
+plots <- plots %>%
+  mutate(long = str_remove_all(long, "'"))
+```
+
+### Convert hms to decimal degrees
+```{r}
+#chd = substr(plots$lat, 3, 3)[1]
+#chm = substr(plots$lat, 6, 6)[1]
+#chs = substr(plots$lat, 9, 9)[1]
+
+#plots$lat <- char2dms(plots$lat, chd=chd, chm=chm, chs=chs)
+```
+
+
+
+### Exploratory Visualizations
+
+```{r}
+plots_stations %>%
+  ggplot(aes(x = site, y = soil.ph, fill = ft)) +
+  geom_boxplot()
+```
+
+```{r}
+plots_stations %>%
+  ggplot(aes(x = site, y = ba, fill = ft)) +
+  geom_boxplot()
+```
+```{r}
+plots_stations %>%
+  ggplot(aes(x = ft, y = soilt, fill = ft)) +
+  geom_boxplot() +
+  scale_color_viridis_c()
+```
+
+```{r}
+plots %>%
+  ggplot(aes(y = vcwd, x = ba)) +
+  geom_col() +
+  theme_bw() +
+  labs(title = "Coarse Woody Debris and Basal Area",
+       x = "Basal area (m2/ha)",
+       y = "CWD volume (m3)")
+```
+
+### Plethodon cinereus morphometrics
+
+```{r}
+pc %>%
+  ggplot(aes(x = tl, y = wt)) +
+  geom_point() +
+  geom_smooth()
+```
+```{r}
+pc %>%
+  drop_na(sex) %>%
+  ggplot(aes(x = sex, y = wt)) +
+  geom_boxplot()
+```
+
+### Other herp morphometrics
+```{r}
+herps %>%
+  count(species, sort = TRUE)
+```
+
+
+```{r}
+herps %>%
+  ggplot(aes(x = species, y = tl, fill = species)) +
+  geom_boxplot() +
+  coord_flip()
+```
 
 
 ## 3. Ethics review
