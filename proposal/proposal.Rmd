@@ -31,16 +31,13 @@ herps <- read_csv("/cloud/project/data/hf131-06-herps.csv")
 ```
 
 ```{r}
-#Plots
 glimpse(plots)
-#ACO
 glimpse(aco)
 glimpse(pc)
 glimpse(herps)
 ```
 
 ### Convert degrees, minutes, seconds to decimal degrees
-
 
 ```{r}
 #latitude
@@ -85,22 +82,18 @@ plots$lat_dm <- as.numeric(plots$lat_dm)
 plots$long_deg <- as.numeric(plots$long_deg)
 plots$long_dm <- as.numeric(plots$long_dm)
 ```
-decimal degrees=d+m/60+s/3600
-
-```{r}
-lattest = 42 + 29.275 / 60
-	
-longtest = 71 + 53.891 / 60
-```
-seems to be a plausible location, right around HF in Petersham.
 
 ```{r}
 coords <- plots %>%
-  select(lat_deg, lat_dm, long_deg, long_dm) %>%
+  select(plot, lat_deg, lat_dm, long_deg, long_dm) %>%
   mutate(lat_dd = lat_deg + lat_dm / 60,
-         long_dd = long_deg + long_dm / 60)
+         long_dd = long_deg + long_dm / 60) %>%
+  select(plot, lat_dd, long_dd)
 
 coords$long_dd <- coords$long_dd*(-1)
+
+plots$lat_dd <- coords$lat_dd
+plots$long_dd <- coords$long_dd
 ```
 
 ```{r}
@@ -108,9 +101,25 @@ coords %>%
   ggplot(aes(x = long_dd, y = lat_dd)) +
   geom_point()
 ```
+
+
 ```{r}
 mass_towns <- st_read("/cloud/project/data/Community Boundaries (Towns) from Survey Points.shp")
 ```
+```{r}
+ggplot(mass_towns) +
+  geom_sf() #+
+#  geom_point(data = coords, (aes(x = long_dd, y = lat_dd)), color = "black", alpha = 0.5)
+```
+
+Not sure why I'm getting this mismatch in coordinates.  My points appear in the correct location when plotted with X/Y coordinates, but they're showing up about 8 degrees too far south and a little west when plotted with this shapefile of Massachusetts towns.  Maybe because the points don't have a coordinate reference system assigned?  I haven't had this issue before though.  I'll try loading these points into ArcGIS to see if I figure out the source of the issue.
+
+
+### Join data files
+```{r}
+join_step1 <- full_join(plots, )
+```
+
 
 ### Exploratory Visualizations
 
