@@ -22,16 +22,18 @@ library(readxl)
 ### Load Packages
 
 ### Load Datafiles from GitHub Repository
-```{r}
+```{r load-data-files, message = FALSE}
 plots <- read_csv("/cloud/project/data/hf131-01-plot.csv")
+trees <- read_csv("/cloud/project/data/hf131-02-tree.csv")
 cwd <- read_csv("/cloud/project/data/hf131-03-cwd.csv")
 aco <- read_csv("/cloud/project/data/hf131-04-aco.csv")
 pc <- read_csv("/cloud/project/data/hf131-05-pc-abund.csv")
 herps <- read_csv("/cloud/project/data/hf131-06-herps.csv")
 ```
 
-```{r}
+```{r glimpse-data-files}
 glimpse(plots)
+glimpse(cwd)
 glimpse(aco)
 glimpse(pc)
 glimpse(herps)
@@ -102,6 +104,7 @@ coords %>%
   geom_point()
 ```
 
+Based on the coordinates plotted here, data was collected within about fifteen miles of Harvard Forest in Petersham, Massachusetts.  The central clusters of points appear to be from the HF properties in Petersham; the southeastern cluster is from Mount Wachusett, and the northern and western clusters on state land in the towns of Northfield, Warwick, and Royalston.  This provides a useful reference as to the spatial scale of this project.
 
 ```{r}
 mass_towns <- st_read("/cloud/project/data/Community Boundaries (Towns) from Survey Points.shp")
@@ -117,32 +120,29 @@ Not sure why I'm getting this mismatch in coordinates.  My points appear in the 
 
 ### Join data files
 ```{r}
-join_step1 <- full_join(plots, )
+# joining all except herps for now
+plots_aco <- left_join(plots, aco)
+plots_aco_cwd <- left_join(plots_aco, cwd)
+df <- left_join(plots_aco_cwd, pc)
 ```
 
 
 ### Exploratory Visualizations
 
 ```{r}
-plots_stations %>%
+df %>%
   ggplot(aes(x = site, y = soil.ph, fill = ft)) +
   geom_boxplot()
 ```
 
 ```{r}
-plots_stations %>%
+df %>%
   ggplot(aes(x = site, y = ba, fill = ft)) +
   geom_boxplot()
 ```
-```{r}
-plots_stations %>%
-  ggplot(aes(x = ft, y = soilt, fill = ft)) +
-  geom_boxplot() +
-  scale_color_viridis_c()
-```
 
 ```{r}
-plots %>%
+df %>%
   ggplot(aes(y = vcwd, x = ba)) +
   geom_col() +
   theme_bw() +
@@ -150,17 +150,29 @@ plots %>%
        x = "Basal area (m2/ha)",
        y = "CWD volume (m3)")
 ```
+```{r}
+df %>%
+  ggplot(aes(x = airt, y = soilt, shape = ft, color = ft)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+```
 
-### Plethodon cinereus morphometrics
+### Plethodon cinereus abundance
 
 ```{r}
-pc %>%
-  ggplot(aes(x = tl, y = wt)) +
+df %>%
+  count()
+```
+
+
+```{r}
+df %>%
+  ggplot(aes(x = tl.x, y = wt)) +
   geom_point() +
   geom_smooth()
 ```
 ```{r}
-pc %>%
+df %>%
   drop_na(sex) %>%
   ggplot(aes(x = sex, y = wt)) +
   geom_boxplot()
@@ -178,6 +190,13 @@ herps %>%
   ggplot(aes(x = species, y = tl, fill = species)) +
   geom_boxplot() +
   coord_flip()
+```
+
+
+```{r}
+df %>%
+  ggplot(aes(x = vcwd, y = wt)) +
+  geom_point()
 ```
 
 
