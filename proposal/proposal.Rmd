@@ -18,6 +18,7 @@ Data citation: Mathewson B, Colburn E. 2023. Eastern Redback Salamander Abundanc
 
 ### Load Packages
 ```{r load-packages, message = FALSE}
+#install.packages(gridExtra)
 library(tidyverse)
 library(broom)
 library(stringr)
@@ -25,6 +26,7 @@ library(sf)
 library(ggspatial)
 library(readxl)
 library(GGally)
+library(gridExtra)
 ```
 
 ### Load Datafiles from GitHub Repository
@@ -46,7 +48,7 @@ glimpse(pc)
 glimpse(herps)
 ```
 
-```{r}
+```{r join-data-files}
 # joining all except herps for now
 plots_aco <- left_join(plots, aco)
 plots_aco_cwd <- left_join(plots_aco, cwd)
@@ -64,7 +66,7 @@ Potential impacts:  This data was not collected on human subjects.  It does, how
 ### Convert degrees, decimal minutes to decimal degrees
 R did not recognize the degree signs used in the `hf131-01-plot.csv` file.  I wasn't able to find a simple function that converted degrees, decimal minutes to decimal degrees, so I used several string functions to replace the characters read in in place of the degree sign with a delimiter character, then calculate the difference manually.
 
-```{r}
+```{r replace-strings-degree-sign}
 #latitude
 df <- df %>%
   mutate(lat = str_replace_all(lat, "\xb0", ":"))
@@ -92,7 +94,7 @@ df <- df %>%
   mutate(long = str_squish(long))
 ```
 
-```{r}
+```{r extract-string-lat-long-values}
 #extract values to create separate columns for degrees, decimal minutes, and hemisphere
 
 df <- df %>%
@@ -107,7 +109,7 @@ df$long_deg <- as.numeric(df$long_deg)
 df$long_dm <- as.numeric(df$long_dm)
 ```
 
-```{r}
+```{r convert-lat-long-to-dd}
 coords <- df %>%
   select(plot, lat_deg, lat_dm, long_deg, long_dm) %>%
   mutate(lat_dd = lat_deg + lat_dm / 60,
@@ -122,7 +124,7 @@ df$lat_dd <- coords$lat_dd
 df$long_dd <- coords$long_dd
 ```
 
-```{r}
+```{r plot-dd-coords}
 coords %>%
   ggplot(aes(x = long_dd, y = lat_dd)) +
   geom_point()
@@ -131,11 +133,11 @@ coords %>%
 Based on the coordinates plotted here, data was collected within twenty miles of Harvard Forest (HF) in Petersham, MA.  The central clusters of points appear to be from the HF properties in Petersham; the southeastern cluster is from Mount Wachusett, and the northern and western clusters on state land in the towns of Northfield, Warwick, and Royalston.  This provides a useful reference as to the spatial scale of this project.
 
 I will also load in shapefiles of Massachusetts town boundaries, along with state-owned land, and any applicable layers in the HF GIS.
-```{r}
+```{r load-mass_towns-shapefile}
 mass_towns <- st_read("/cloud/project/data/Community Boundaries (Towns) from Survey Points.shp")
 ```
 
-```{r}
+```{r plot-mass_towns-coords}
 ggplot(mass_towns) +
   geom_sf() +
   geom_point(data = coords, (aes(x = long_dd, y = lat_dd)), color = "black", alpha = 0.5)
@@ -168,23 +170,39 @@ Simple linear model.
 Explanatory variable: coarse woody debris volume
 Response variable: P. cinereus abundance
 
-#### P. cinereus are larger/heavier where coarse wood debris volume is higher.
-
-Simple linear model.
-Explanatory variable: coarse woody debris volume
-Response variables: total length, snout-vent length, weight.
-
 #### P. cinereus sexes are morphologically similar between forest types.
 
 Multivariate regression/MANOVA (if applicable)
 Explanatory variables: sex, forest type
 Response variables: total length, snout-vent length, weight (as matrix if MANOVA).
 
-In addition to these preliminary hypotheses and analytical methods, I would be interested in using non-linear modelling and bootstrapping if any biologically relevant variables violate assumptions of normality or have a non-linear associations.
-
 ### Exploratory visualizations
 #### Forest Structure / Environmental conditions
-```{r}
+
+```{r plot-hists-env-cond, message = FALSE, warning = FALSE}
+p1 <- ggplot(df, aes(x = ba)) +
+  geom_histogram(fill = "skyblue", color = "black")
+p2 <- ggplot(df, aes(x = st.ha)) +
+  geom_histogram(fill = "skyblue", color = "black")
+p3 <- ggplot(df, aes(x = ts)) +
+  geom_histogram(fill = "skyblue", color = "black")
+p4 <- ggplot(df, aes(x = canopy.cover)) +
+  geom_histogram(fill = "skyblue", color = "black")
+p5 <- ggplot(df, aes(x = vcwd)) +
+  geom_histogram(fill = "skyblue", color = "black")
+p6 <- ggplot(df, aes(x = soil.ph)) +
+  geom_histogram(fill = "skyblue", color = "black")
+p7 <- ggplot(df, aes(x = soilt)) +
+  geom_histogram(fill = "skyblue", color = "black")
+p8 <- ggplot(df, aes(x = airt)) +
+  geom_histogram(fill = "skyblue", color = "black")
+p9 <- ggplot(df, aes(x = dbh)) +
+  geom_histogram(fill = "skyblue", color = "black")
+
+grid.arrange(p1, p2, p3, p4, p5, p6, p7, p8, p9)
+```
+
+```{r boxplot-soilph-ft}
 df %>%
   ggplot(aes(x = site, y = soil.ph, fill = ft)) +
   geom_boxplot()
@@ -192,7 +210,7 @@ df %>%
 
 Boxplot of soil pH by site.  Boxes are colored per forest type ("TS" = Tsuga canadensis dominated (>50% BA), "MD" = mixed-deciduous forest (hemlock <25% BA)).  Hemlock dominated stands are consistently more acidic than mixed deciduous stands with some outliers.
 
-```{r}
+```{r boxplot-ba-ft}
 df %>%
   ggplot(aes(x = site, y = ba, fill = ft)) +
   geom_boxplot()
@@ -200,7 +218,7 @@ df %>%
 
 Boxplot of basal area (m2/ha) by site.  Hemlock dominated sites have consistently higher BA than mixed deciduous sites.
 
-```{r}
+```{r plot-vcwd-ba-ft}
 df %>%
   ggplot(aes(y = vcwd, x = ba, color = ft)) +
   geom_jitter() +
@@ -213,22 +231,8 @@ df %>%
 
 Coarse woody debris volume is higher in stands with lower basal area, which is reasonable given that areas that were recently affected by blowdown events should have higher CWD and lower BA, but very dense stands (high BA) should have less CWD.  Coloring the points by forest type, we see that it is primarily hemlock-dominated df that have high BA and low CWD, and hardwood sites have lower BA and higher CWD volume.
 
-```{r warning = FALSE}
-df %>%
-  filter(ft != "NA") %>%
-  ggplot(aes(x = airt, y = soilt, shape = ft, color = ft)) +
-  geom_point() +
-  geom_smooth(method = "lm", fullrange = TRUE, se = FALSE) +
-  labs(title = "Soil temp as function of air temp",
-       subtitle = "In hemlock and mixed deciduous forest",
-       x = "Air temp (°C)",
-       y = "Soil temp (°C)")
-```
-
-Modelling soil temperature as a function of air temperature and forest type indicates that there is not much sheltering effect of hemlock-dominated canopy cover on soil temperature, which could be an important factor for P. cinereus abundance.
-
 #### Plethodon cinereus abundance
-```{r}
+```{r create-pc_abund}
 # creating new dataframe called pc_abund for P. cinereus abundance, grouped by plot, site, and forest type.
 pc_abund <- df %>%
   group_by(plot, site, ft) %>%
@@ -239,21 +243,8 @@ pc_abund <- df %>%
 
 pc_abund
 ```
-```{r}
-pc_abund %>%
-  group_by(site) %>%
-  summarise(mean = mean(n_ind),
-            sd = sd(n_ind))
 
-pc_abund %>%
-  group_by(ft) %>%
-  ggplot(aes(x = site, y = n_ind)) +
-  geom_boxplot()
-```
-
-Boxplot of P. cinereus abundance by site.  Mean abundance is highest at sites SC1, ER2, and WSF.  Site MR has the lowest mean abundance.  SC1 and TS1 have the greatest variance.  Refer to table for exact mean and standard deviation values.
-
-```{r}
+```{r calc-mean-sd-ft-and-boxplot-n_ind-ft}
 pc_abund %>%
   group_by(ft) %>%
   summarise(mean = mean(n_ind),
@@ -267,59 +258,35 @@ pc_abund %>%
 
 P. cinereus abundance is higher in hemlock-dominated plots (mean = 13 +/- 15 individuals), than in mixed deciduous forest (mean = 9 +/- 6 individuals).  This shows us that while hemlock-dominated plots had more individuals, they also had greater variation in abundance.
 
-```{r}
-df %>%
-  group_by(vcwd) %>%
-  drop_na(pca) %>%
-  filter(pca != 0) %>%
-  count(pca) %>%
-  ggplot(aes(x = vcwd, y = n)) +
-  geom_jitter() +
-  geom_smooth(method = "lm") +
-  labs(title = "P. cinereus abundance",
-       y = "n Observations",
-       x = "Volume CWD (m2)")
-```
-P. cinereus abundance appears that it may be greater at lower coarse woody debris volumes, though the linear model suggests that there is high variability at high CWD volume values, given the paucity of observations.  This may simply be an effect of limited sampling in high CWD sites, and/or an effect of introducing novel habitat features (cover boards), which are not representative of existing habitat features.
-
-
-```{r}
-df %>%
-  group_by(soil.ph, wt) %>%
-  drop_na(wt) %>%
-  ggplot(aes(x = soil.ph, y = wt)) +
-  geom_point() +
-  geom_smooth(method = "lm")
-```
-
-It appears that there is little to no association between P. cinereus individual weights and soil pH, though there are more observations at lower pH values (e.g., hemlock-dominated sites), indicating that these sites are somewhat more favorable for some reason (whether pH or another factor)
-
 #### Morphometrics
-```{r warning = FALSE}
+Plethodon cinereus:
+```{r plot-hists-morpho, warning = FALSE}
+p1 <- ggplot(df, aes(x = tl)) +
+  geom_histogram(fill = "skyblue", color = "black") +
+  labs(x = "Total length (mm)")
+p2 <- ggplot(df, aes(x = svl)) +
+  geom_histogram(fill = "skyblue", color = "black") +
+  labs(x = "Snout-vent length (mm)")
+p3 <- ggplot(df, aes(x = wt)) +
+  geom_histogram(fill = "skyblue", color = "black") +
+  labs(x = "Weight (cg)")
+
+grid.arrange(p1, p2, p3)
+```
+
+The total length, snout-vent length, and weight variables are all normally distributed, with some left skew in the length variables.
+
+```{r plot-ggpairs-morpho, warning = FALSE}
 df %>%
   ggpairs(aes(color = sex), columns = c("wt", "tl", "svl"))
 ```
 
-```{r}
-herps %>%
-  count(species, sort = TRUE)
-```
+There appears to be a non-linear relationship between weight and total length, as well as between weight and snout-vent length.  The relationship between total length and snout-vent length is linear.  Females appear to be somewhat longer and heavier than males.
 
-
-```{r}
+Other herps:
+```{r plot-herps-tl-sp}
 herps %>%
   ggplot(aes(x = species, y = tl, fill = species)) +
   geom_boxplot() +
   coord_flip()
 ```
-
-
-```{r}
-df %>%
-  ggplot(aes(x = vcwd, y = wt)) +
-  geom_point()
-```
-
-
-
-

@@ -57,6 +57,7 @@ Archive: HF131 (v.14). Environmental Data Initiative:
 ### Load Packages
 
 ``` r
+#install.packages(gridExtra)
 library(tidyverse)
 library(broom)
 library(stringr)
@@ -64,6 +65,7 @@ library(sf)
 library(ggspatial)
 library(readxl)
 library(GGally)
+library(gridExtra)
 ```
 
 ### Load Datafiles from GitHub Repository
@@ -336,7 +338,7 @@ coords %>%
 
     ## Warning: Removed 48 rows containing missing values (`geom_point()`).
 
-![](proposal_files/figure-gfm/unnamed-chunk-5-1.png)<!-- -->
+![](proposal_files/figure-gfm/plot-dd-coords-1.png)<!-- -->
 
 Based on the coordinates plotted here, data was collected within twenty
 miles of Harvard Forest (HF) in Petersham, MA. The central clusters of
@@ -369,7 +371,7 @@ ggplot(mass_towns) +
 
     ## Warning: Removed 48 rows containing missing values (`geom_point()`).
 
-![](proposal_files/figure-gfm/unnamed-chunk-7-1.png)<!-- -->
+![](proposal_files/figure-gfm/plot-mass_towns-coords-1.png)<!-- -->
 
 Not sure why I’m getting this mismatch in coordinates. My points appear
 in the correct location when plotted with X/Y coordinates only, but
@@ -401,25 +403,40 @@ debris, mean stand diameter. Response variable: P. cinereus abundance.
 Simple linear model. Explanatory variable: coarse woody debris volume
 Response variable: P. cinereus abundance
 
-#### P. cinereus are larger/heavier where coarse wood debris volume is higher.
-
-Simple linear model. Explanatory variable: coarse woody debris volume
-Response variables: total length, snout-vent length, weight.
-
 #### P. cinereus sexes are morphologically similar between forest types.
 
 Multivariate regression/MANOVA (if applicable) Explanatory variables:
 sex, forest type Response variables: total length, snout-vent length,
 weight (as matrix if MANOVA).
 
-In addition to these preliminary hypotheses and analytical methods, I
-would be interested in using non-linear modelling and bootstrapping if
-any biologically relevant variables violate assumptions of normality or
-have a non-linear associations.
-
 ### Exploratory visualizations
 
 #### Forest Structure / Environmental conditions
+
+``` r
+p1 <- ggplot(df, aes(x = ba)) +
+  geom_histogram(fill = "skyblue", color = "black")
+p2 <- ggplot(df, aes(x = st.ha)) +
+  geom_histogram(fill = "skyblue", color = "black")
+p3 <- ggplot(df, aes(x = ts)) +
+  geom_histogram(fill = "skyblue", color = "black")
+p4 <- ggplot(df, aes(x = canopy.cover)) +
+  geom_histogram(fill = "skyblue", color = "black")
+p5 <- ggplot(df, aes(x = vcwd)) +
+  geom_histogram(fill = "skyblue", color = "black")
+p6 <- ggplot(df, aes(x = soil.ph)) +
+  geom_histogram(fill = "skyblue", color = "black")
+p7 <- ggplot(df, aes(x = soilt)) +
+  geom_histogram(fill = "skyblue", color = "black")
+p8 <- ggplot(df, aes(x = airt)) +
+  geom_histogram(fill = "skyblue", color = "black")
+p9 <- ggplot(df, aes(x = dbh)) +
+  geom_histogram(fill = "skyblue", color = "black")
+
+grid.arrange(p1, p2, p3, p4, p5, p6, p7, p8, p9)
+```
+
+![](proposal_files/figure-gfm/plot-hists-env-cond-1.png)<!-- -->
 
 ``` r
 df %>%
@@ -427,7 +444,7 @@ df %>%
   geom_boxplot()
 ```
 
-![](proposal_files/figure-gfm/unnamed-chunk-8-1.png)<!-- -->
+![](proposal_files/figure-gfm/boxplot-soilph-ft-1.png)<!-- -->
 
 Boxplot of soil pH by site. Boxes are colored per forest type (“TS” =
 Tsuga canadensis dominated (\>50% BA), “MD” = mixed-deciduous forest
@@ -440,7 +457,7 @@ df %>%
   geom_boxplot()
 ```
 
-![](proposal_files/figure-gfm/unnamed-chunk-9-1.png)<!-- -->
+![](proposal_files/figure-gfm/boxplot-ba-ft-1.png)<!-- -->
 
 Boxplot of basal area (m2/ha) by site. Hemlock dominated sites have
 consistently higher BA than mixed deciduous sites.
@@ -456,7 +473,7 @@ df %>%
        y = "CWD volume (m3)")
 ```
 
-![](proposal_files/figure-gfm/unnamed-chunk-10-1.png)<!-- -->
+![](proposal_files/figure-gfm/plot-vcwd-ba-ft-1.png)<!-- -->
 
 Coarse woody debris volume is higher in stands with lower basal area,
 which is reasonable given that areas that were recently affected by
@@ -464,27 +481,6 @@ blowdown events should have higher CWD and lower BA, but very dense
 stands (high BA) should have less CWD. Coloring the points by forest
 type, we see that it is primarily hemlock-dominated df that have high BA
 and low CWD, and hardwood sites have lower BA and higher CWD volume.
-
-``` r
-df %>%
-  filter(ft != "NA") %>%
-  ggplot(aes(x = airt, y = soilt, shape = ft, color = ft)) +
-  geom_point() +
-  geom_smooth(method = "lm", fullrange = TRUE, se = FALSE) +
-  labs(title = "Soil temp as function of air temp",
-       subtitle = "In hemlock and mixed deciduous forest",
-       x = "Air temp (°C)",
-       y = "Soil temp (°C)")
-```
-
-    ## `geom_smooth()` using formula = 'y ~ x'
-
-![](proposal_files/figure-gfm/unnamed-chunk-11-1.png)<!-- -->
-
-Modelling soil temperature as a function of air temperature and forest
-type indicates that there is not much sheltering effect of
-hemlock-dominated canopy cover on soil temperature, which could be an
-important factor for P. cinereus abundance.
 
 #### Plethodon cinereus abundance
 
@@ -523,46 +519,6 @@ pc_abund
 
 ``` r
 pc_abund %>%
-  group_by(site) %>%
-  summarise(mean = mean(n_ind),
-            sd = sd(n_ind))
-```
-
-    ## # A tibble: 15 × 3
-    ##    site   mean     sd
-    ##    <chr> <dbl>  <dbl>
-    ##  1 BH      4.5  4.95 
-    ##  2 ER1     6.5  0.707
-    ##  3 ER2    20.5  2.12 
-    ##  4 MGSF    5    0    
-    ##  5 MR      2    1.41 
-    ##  6 NSF    11.5  0.707
-    ##  7 PH      6.5  2.12 
-    ##  8 SC1    33.5 41.7  
-    ##  9 SC2    14    4.24 
-    ## 10 TS1    13   12.7  
-    ## 11 TS2     8.5  0.707
-    ## 12 WA1     3.5  3.54 
-    ## 13 WA2    10   NA    
-    ## 14 WA3    10.5  2.12 
-    ## 15 WSF    17    8.49
-
-``` r
-pc_abund %>%
-  group_by(ft) %>%
-  ggplot(aes(x = site, y = n_ind)) +
-  geom_boxplot()
-```
-
-![](proposal_files/figure-gfm/unnamed-chunk-13-1.png)<!-- -->
-
-Boxplot of P. cinereus abundance by site. Mean abundance is highest at
-sites SC1, ER2, and WSF. Site MR has the lowest mean abundance. SC1 and
-TS1 have the greatest variance. Refer to table for exact mean and
-standard deviation values.
-
-``` r
-pc_abund %>%
   group_by(ft) %>%
   summarise(mean = mean(n_ind),
             sd = sd(n_ind))
@@ -581,79 +537,53 @@ pc_abund %>%
   geom_boxplot()
 ```
 
-![](proposal_files/figure-gfm/unnamed-chunk-14-1.png)<!-- -->
+![](proposal_files/figure-gfm/calc-mean-sd-ft-and-boxplot-n_ind-ft-1.png)<!-- -->
 
 P. cinereus abundance is higher in hemlock-dominated plots (mean = 13
 +/- 15 individuals), than in mixed deciduous forest (mean = 9 +/- 6
 individuals). This shows us that while hemlock-dominated plots had more
 individuals, they also had greater variation in abundance.
 
-``` r
-df %>%
-  group_by(vcwd) %>%
-  drop_na(pca) %>%
-  filter(pca != 0) %>%
-  count(pca) %>%
-  ggplot(aes(x = vcwd, y = n)) +
-  geom_jitter() +
-  geom_smooth(method = "lm") +
-  labs(title = "P. cinereus abundance",
-       y = "n Observations",
-       x = "Volume CWD (m2)")
-```
-
-    ## `geom_smooth()` using formula = 'y ~ x'
-
-![](proposal_files/figure-gfm/unnamed-chunk-15-1.png)<!-- --> P.
-cinereus abundance appears that it may be greater at lower coarse woody
-debris volumes, though the linear model suggests that there is high
-variability at high CWD volume values, given the paucity of
-observations. This may simply be an effect of limited sampling in high
-CWD sites, and/or an effect of introducing novel habitat features (cover
-boards), which are not representative of existing habitat features.
-
-``` r
-df %>%
-  group_by(soil.ph, wt) %>%
-  drop_na(wt) %>%
-  ggplot(aes(x = soil.ph, y = wt)) +
-  geom_point() +
-  geom_smooth(method = "lm")
-```
-
-    ## `geom_smooth()` using formula = 'y ~ x'
-
-![](proposal_files/figure-gfm/unnamed-chunk-16-1.png)<!-- -->
-
-It appears that there is little to no association between P. cinereus
-individual weights and soil pH, though there are more observations at
-lower pH values (e.g., hemlock-dominated sites), indicating that these
-sites are somewhat more favorable for some reason (whether pH or another
-factor)
-
 #### Morphometrics
+
+Plethodon cinereus:
+
+``` r
+p1 <- ggplot(df, aes(x = tl)) +
+  geom_histogram(fill = "skyblue", color = "black") +
+  labs(x = "Total length (mm)")
+p2 <- ggplot(df, aes(x = svl)) +
+  geom_histogram(fill = "skyblue", color = "black") +
+  labs(x = "Snout-vent length (mm)")
+p3 <- ggplot(df, aes(x = wt)) +
+  geom_histogram(fill = "skyblue", color = "black") +
+  labs(x = "Weight (cg)")
+
+grid.arrange(p1, p2, p3)
+```
+
+    ## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.
+    ## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.
+    ## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.
+
+![](proposal_files/figure-gfm/plot-hists-morpho-1.png)<!-- -->
+
+The total length, snout-vent length, and weight variables are all
+normally distributed, with some left skew in the length variables.
 
 ``` r
 df %>%
   ggpairs(aes(color = sex), columns = c("wt", "tl", "svl"))
 ```
 
-![](proposal_files/figure-gfm/unnamed-chunk-17-1.png)<!-- -->
+![](proposal_files/figure-gfm/plot-ggpairs-morpho-1.png)<!-- -->
 
-``` r
-herps %>%
-  count(species, sort = TRUE)
-```
+There appears to be a non-linear relationship between weight and total
+length, as well as between weight and snout-vent length. The
+relationship between total length and snout-vent length is linear.
+Females appear to be somewhat longer and heavier than males.
 
-    ## # A tibble: 6 × 2
-    ##   species     n
-    ##   <chr>   <int>
-    ## 1 NOVI       34
-    ## 2 RASY        4
-    ## 3 AMMA        3
-    ## 4 EUBI        3
-    ## 5 STOC        3
-    ## 6 THIS        1
+Other herps:
 
 ``` r
 herps %>%
@@ -664,14 +594,4 @@ herps %>%
 
     ## Warning: Removed 11 rows containing non-finite values (`stat_boxplot()`).
 
-![](proposal_files/figure-gfm/unnamed-chunk-19-1.png)<!-- -->
-
-``` r
-df %>%
-  ggplot(aes(x = vcwd, y = wt)) +
-  geom_point()
-```
-
-    ## Warning: Removed 2215 rows containing missing values (`geom_point()`).
-
-![](proposal_files/figure-gfm/unnamed-chunk-20-1.png)<!-- -->
+![](proposal_files/figure-gfm/plot-herps-tl-sp-1.png)<!-- -->
