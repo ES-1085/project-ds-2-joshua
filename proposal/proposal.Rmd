@@ -9,7 +9,7 @@ output: github_document
 ## 1. Introduction
 For my final project in Data Science II, I decided to use a dataset comparing eastern red-backed salamander (Plethodon cinereus) abundance and distribution across different forest types in north-central Massachusetts.  Harvard Forest has been involved in a number of observational and experimental studies of changes in forest composition, structure, and biodiversity relating to loss of important tree species due to introduced pathogens; one of their main projects has been the experimental removal of hemlock (Tsuga canadensis) to simulate the loss of this species due to hemlock woolly adelgid (HWA) (Adelges tsugae).  This project is one of several observational studies relating to biodiversity in hemlock-dominated forest stands, and how plant, invertebrate, and vertebrate communities may be affected by the loss of hemlock.
 
-Data was collected in 2005 by Brooks Mathewson and Elizabeth Colburn on properties owned by Harvard Forest and on state-owned land in north-central Massachusetts, within a 20-mile radius of the main Harvard Forest property in Petersham.  Fifteen sites occupying a variety of mid-elevation forested areas were selected.  Two paired, fixed-radius plots (each 0.33ha in area) were located within each site using random sampling stratified by forest type; one site of the pair being in a hemlock-dominated stand, the other being in a mixed deciduous stand.  Hemlock-dominated sites were defined as having >50% of total basal area (BA) being hemlock, and mixed deciduous as <25% of total BA being hemlock.  Each plot center was used as an intersection between two perpendicular 50m transects, along which pairs of cover boards (ACO stations) were placed at the transect ends and intersection.  Cover boards were sampled once every 2-3 weeks from June 13th until November 4th 2005.  All amphibian and reptile species detected under cover boards were recorded along with basic morphometrics; for P. cinereus, total length, snout-vent length, weight, phase, and sex were recorded.  For all other herps, snout-vent length was recorded.
+Data was collected in 2005 by Brooks Mathewson and Elizabeth Colburn on properties owned by Harvard Forest and on state-owned land in north-central Massachusetts, within a 20-mile radius of the main Harvard Forest property in Petersham.  Fifteen sites occupying a variety of mid-elevation forested areas were selected.  Two paired, fixed-radius df (each 0.33ha in area) were located within each site using random sampling stratified by forest type; one site of the pair being in a hemlock-dominated stand, the other being in a mixed deciduous stand.  Hemlock-dominated sites were defined as having >50% of total basal area (BA) being hemlock, and mixed deciduous as <25% of total BA being hemlock.  Each plot center was used as an intersection between two perpendicular 50m transects, along which pairs of cover boards (ACO stations) were placed at the transect ends and intersection.  Cover boards were sampled once every 2-3 weeks from June 13th until November 4th 2005.  All amphibian and reptile species detected under cover boards were recorded along with basic morphometrics; for P. cinereus, total length, snout-vent length, weight, phase, and sex were recorded.  For all other herps, snout-vent length was recorded.
 
 Data was published in six separate .csv files, one including plot number, site, topography, location, forest type, etc., another, one including forest inventory data from each plot, one including coarse woody debris (CWD) measurements for each plot, one including all cover board observations, one including P. cinereus abundance and morphometrics, and another including abundance and morphometrics for all other herps observed.
 
@@ -24,6 +24,7 @@ library(stringr)
 library(sf)
 library(ggspatial)
 library(readxl)
+library(GGally)
 ```
 
 ### Load Datafiles from GitHub Repository
@@ -45,71 +46,80 @@ glimpse(pc)
 glimpse(herps)
 ```
 
-
+```{r}
+# joining all except herps for now
+plots_aco <- left_join(plots, aco)
+plots_aco_cwd <- left_join(plots_aco, cwd)
+plots_aco_cwd_trees <- left_join(plots_aco_cwd, trees)
+df <- left_join(plots_aco_cwd_trees, pc)
+```
 ## 3. Ethics review
-Limitations:  Sampling design has no way to identify 'recaptures'; if the same salamanders were staying at or returning to the same cover board across multiple sampling days, there is no definitive way to identify how these individuals are impacting counts.  The 2-3 week sampling interval may actually help to address this pseudoreplication, since there may be some turnover in individuals salamanders using a cover board station.  Data was collected over only a single season and may not be representative of P. cinereus population dynamics on a longer scale; another year may show different patterns of abundance and distribution and some factor other than forest type may be involved.  Since this is an observational and not experimental study, there is no way to infer causation between any variables.
+Limitations:  Sampling design has no way to identify 'recaptures'; if the same salamanders were staying at or returning to the same cover board across multiple sampling days, there is no definitive way to identify how these individuals are impacting counts.  The 2-3 week sampling interval may actually help to address this pseudoreplication, since there may be some turnover in individuals salamanders using a cover board station.  Data was collected over only a single season and may not be representative of P. cinereus population dynamics on a longer scale; another year may show different patterns of abundance and distribution and some factor other than forest type may be involved.  Another limitation is that by introducing a novel habitat feature (cover boards), use of existing habitat features by herps is altered.  Since this is an observational and not experimental study, there is no way to infer causation between any variables.
 
 Reasons for using data:  I wanted to work with an ecological dataset for this project that encompassed a broad array of species-environment interactions.  I chose this specific dataset out of personal interest in forest ecology and herpetology; and am using it to learn more about different techniques for analysis of ecological data, as well as to learn more about research design for ecological sampling.  I declare no conflicting interests.
 
 Potential impacts:  This data was not collected on human subjects.  It does, however, have some potential impacts on how we address macroinvertebrate and herpetological communities in forest management, in specific regards to retaining habitat features that aid in supporting these communities, especially in the face of climate change and introduced tree pests and pathogens.
 
 ## 4. Data analysis plan
-### Convert degrees, minutes, seconds to decimal degrees
+### Convert degrees, decimal minutes to decimal degrees
+R did not recognize the degree signs used in the `hf131-01-plot.csv` file.  I wasn't able to find a simple function that converted degrees, decimal minutes to decimal degrees, so I used several string functions to replace the characters read in in place of the degree sign with a delimiter character, then calculate the difference manually.
 
 ```{r}
 #latitude
-plots <- plots %>%
+df <- df %>%
   mutate(lat = str_replace_all(lat, "\xb0", ":"))
 
-plots <- plots %>%
+df <- df %>%
   mutate(lat = str_remove_all(lat, "N"))
 
-plots <- plots %>%
+df <- df %>%
   mutate(lat = str_remove_all(lat, "'"))
 
-plots <- plots %>%
+df <- df %>%
   mutate(lat = str_squish(lat))
 
 #longitude
-plots <- plots %>%
+df <- df %>%
   mutate(long = str_replace_all(long, "\xb0", ":"))
 
-plots <- plots %>%
+df <- df %>%
   mutate(long = str_remove_all(long, "W"))
 
-plots <- plots %>%
+df <- df %>%
   mutate(long = str_remove_all(long, "'"))
 
-plots <- plots %>%
+df <- df %>%
   mutate(long = str_squish(long))
 ```
 
 ```{r}
 #extract values to create separate columns for degrees, decimal minutes, and hemisphere
 
-plots <- plots %>%
-  mutate(lat_deg = str_extract_all(plots$lat, "..(?=:)"),
-         lat_dm = str_extract_all(plots$lat, "(?<=:)......"),
-         long_deg = str_extract_all(plots$long, "..(?=:)"),
-         long_dm = str_extract_all(plots$long, "(?<=:)......"))
+df <- df %>%
+  mutate(lat_deg = str_extract_all(df$lat, "..(?=:)"),
+         lat_dm = str_extract_all(df$lat, "(?<=:)......"),
+         long_deg = str_extract_all(df$long, "..(?=:)"),
+         long_dm = str_extract_all(df$long, "(?<=:)......"))
 
-plots$lat_deg <- as.numeric(plots$lat_deg)
-plots$lat_dm <- as.numeric(plots$lat_dm)
-plots$long_deg <- as.numeric(plots$long_deg)
-plots$long_dm <- as.numeric(plots$long_dm)
+df$lat_deg <- as.numeric(df$lat_deg)
+df$lat_dm <- as.numeric(df$lat_dm)
+df$long_deg <- as.numeric(df$long_deg)
+df$long_dm <- as.numeric(df$long_dm)
 ```
 
 ```{r}
-coords <- plots %>%
+coords <- df %>%
   select(plot, lat_deg, lat_dm, long_deg, long_dm) %>%
   mutate(lat_dd = lat_deg + lat_dm / 60,
          long_dd = long_deg + long_dm / 60) %>%
   select(plot, lat_dd, long_dd)
 
+# this converts all values in the the `long_dd` variable to negative.
 coords$long_dd <- coords$long_dd*(-1)
 
-plots$lat_dd <- coords$lat_dd
-plots$long_dd <- coords$long_dd
+# this saves the new coordinates in decimal degrees to the main dataframe, but it leaves a separate smaller `coords` dataframe to work with.
+df$lat_dd <- coords$lat_dd
+df$long_dd <- coords$long_dd
 ```
 
 ```{r}
@@ -118,31 +128,62 @@ coords %>%
   geom_point()
 ```
 
-Based on the coordinates plotted here, data was collected within about fifteen miles of Harvard Forest (HF) in Petersham, Massachusetts.  The central clusters of points appear to be from the HF properties in Petersham; the southeastern cluster is from Mount Wachusett, and the northern and western clusters on state land in the towns of Northfield, Warwick, and Royalston.  This provides a useful reference as to the spatial scale of this project.
+Based on the coordinates plotted here, data was collected within twenty miles of Harvard Forest (HF) in Petersham, MA.  The central clusters of points appear to be from the HF properties in Petersham; the southeastern cluster is from Mount Wachusett, and the northern and western clusters on state land in the towns of Northfield, Warwick, and Royalston.  This provides a useful reference as to the spatial scale of this project.
 
+I will also load in shapefiles of Massachusetts town boundaries, along with state-owned land, and any applicable layers in the HF GIS.
 ```{r}
 mass_towns <- st_read("/cloud/project/data/Community Boundaries (Towns) from Survey Points.shp")
 ```
+
 ```{r}
 ggplot(mass_towns) +
   geom_sf() +
   geom_point(data = coords, (aes(x = long_dd, y = lat_dd)), color = "black", alpha = 0.5)
 ```
 
-Not sure why I'm getting this mismatch in coordinates.  My points appear in the correct location when plotted with X/Y coordinates, but they're showing up about 8 degrees too far south and a little west when plotted with this shapefile of Massachusetts towns.  Maybe because the points don't have a coordinate reference system assigned?  I haven't had this issue before though.  I'll try loading these points into ArcGIS to see if I figure out the source of the issue.
+Not sure why I'm getting this mismatch in coordinates.  My points appear in the correct location when plotted with X/Y coordinates only, but they're showing up about 8 degrees too far south and a little west when plotted with this shapefile of Massachusetts towns.  Maybe because the points don't have a coordinate reference system assigned?  I haven't had this issue before though.  I'll try loading these points into ArcGIS to see if I can figure out the source of the issue.
 
+### Preliminary hypotheses
+#### P. cinereus abundance is different between hemlock-dominated and mixed deciduous forest types.
 
-### Join data files
-```{r}
-# joining all except herps for now
-plots_aco <- full_join(plots, aco)
-plots_aco_cwd <- full_join(plots_aco, cwd)
-plots_aco_cwd_trees <- full_join(plots_aco_cwd, trees)
-df <- full_join(plots_aco_cwd_trees, pc)
-```
+T-test/simple linear model.
+Explanatory variable: forest type
+Response variable: P. cinereus abundance
 
+#### Hemlock forests offer an important refugae for P. cinereus by shading the forest floor and maintaining more stable soil temperature.
 
-### Forest Structure / Environmental conditions
+Generalized linear model.
+Explanatory variable: air temperature, forest type
+Response variables: soil temperature
+
+#### P. cinereus abundance is positively correlated with older, more structurally complex forest stands.
+
+Multivariate regression.
+Explanatory variables: basal area, coarse woody debris, mean stand diameter.
+Response variable: P. cinereus abundance.
+
+#### P. cinereus abundance is positively correlated with higher volumes of coarse woody debris.
+
+Simple linear model.
+Explanatory variable: coarse woody debris volume
+Response variable: P. cinereus abundance
+
+#### P. cinereus are larger/heavier where coarse wood debris volume is higher.
+
+Simple linear model.
+Explanatory variable: coarse woody debris volume
+Response variables: total length, snout-vent length, weight.
+
+#### P. cinereus sexes are morphologically similar between forest types.
+
+Multivariate regression/MANOVA (if applicable)
+Explanatory variables: sex, forest type
+Response variables: total length, snout-vent length, weight (as matrix if MANOVA).
+
+In addition to these preliminary hypotheses and analytical methods, I would be interested in using non-linear modelling and bootstrapping if any biologically relevant variables violate assumptions of normality or have a non-linear associations.
+
+### Exploratory visualizations
+#### Forest Structure / Environmental conditions
 ```{r}
 df %>%
   ggplot(aes(x = site, y = soil.ph, fill = ft)) +
@@ -165,12 +206,13 @@ df %>%
   geom_jitter() +
   theme_bw() +
   labs(title = "Coarse Woody Debris and Basal Area",
+       subtitle = "By Forest Type",
        x = "Basal area (m2/ha)",
        y = "CWD volume (m3)")
 ```
-Coarse woody debris volume is higher in stands with lower basal area, which is reasonable given that areas that were recently affected by blowdown events should have higher CWD and lower BA, but very dense stands (high BA) should have less CWD.  Coloring the points by forest type, we see that it is primarily hemlock-dominated plots that have high BA and low CWD, and hardwood sites have lower BA and higher CWD volume.
 
-#### Is soil temp more or less associated with air temperature in hemlock dominated vs mixed-deciduous plots?
+Coarse woody debris volume is higher in stands with lower basal area, which is reasonable given that areas that were recently affected by blowdown events should have higher CWD and lower BA, but very dense stands (high BA) should have less CWD.  Coloring the points by forest type, we see that it is primarily hemlock-dominated df that have high BA and low CWD, and hardwood sites have lower BA and higher CWD volume.
+
 ```{r warning = FALSE}
 df %>%
   filter(ft != "NA") %>%
@@ -182,35 +224,48 @@ df %>%
        x = "Air temp (°C)",
        y = "Soil temp (°C)")
 ```
+
 Modelling soil temperature as a function of air temperature and forest type indicates that there is not much sheltering effect of hemlock-dominated canopy cover on soil temperature, which could be an important factor for P. cinereus abundance.
 
-
-
-### Plethodon cinereus abundance
-63
+#### Plethodon cinereus abundance
 ```{r}
-df %>%
-  group_by(plot, site) %>%
+# creating new dataframe called pc_abund for P. cinereus abundance, grouped by plot, site, and forest type.
+pc_abund <- df %>%
+  group_by(plot, site, ft) %>%
   drop_na(pca) %>%
   filter(pca != 0) %>%
   count(pca, sort = TRUE) %>%
-  summarise(n_ind = sum(n*pca)) %>%
-  arrange(desc(n_ind))
+  summarise(n_ind = sum(n*pca))
+
+pc_abund
 ```
+```{r}
+pc_abund %>%
+  group_by(site) %>%
+  summarise(mean = mean(n_ind),
+            sd = sd(n_ind))
+
+pc_abund %>%
+  group_by(ft) %>%
+  ggplot(aes(x = site, y = n_ind)) +
+  geom_boxplot()
+```
+
+Boxplot of P. cinereus abundance by site.  Mean abundance is highest at sites SC1, ER2, and WSF.  Site MR has the lowest mean abundance.  SC1 and TS1 have the greatest variance.  Refer to table for exact mean and standard deviation values.
 
 ```{r}
-df %>%
+pc_abund %>%
   group_by(ft) %>%
-  drop_na(pca) %>%
-  filter(pca != 0) %>%
-  count(pca, sort = TRUE) %>%
-  summarise(n_ind = sum(n*pca)) %>%
+  summarise(mean = mean(n_ind),
+            sd = sd(n_ind))
+
+pc_abund %>%
   group_by(ft) %>%
-  summarise(mean = mean(n_ind))
+  ggplot(aes(x = ft, y = n_ind)) +
+  geom_boxplot()
 ```
 
-
-P. cinereus abundance is higher in hemlock dominated forest (mean = 53 individuals), than in mixed deciduous forest (mean = 37 individuals).
+P. cinereus abundance is higher in hemlock-dominated plots (mean = 13 +/- 15 individuals), than in mixed deciduous forest (mean = 9 +/- 6 individuals).  This shows us that while hemlock-dominated plots had more individuals, they also had greater variation in abundance.
 
 ```{r}
 df %>%
@@ -225,32 +280,26 @@ df %>%
        y = "n Observations",
        x = "Volume CWD (m2)")
 ```
+P. cinereus abundance appears that it may be greater at lower coarse woody debris volumes, though the linear model suggests that there is high variability at high CWD volume values, given the paucity of observations.  This may simply be an effect of limited sampling in high CWD sites, and/or an effect of introducing novel habitat features (cover boards), which are not representative of existing habitat features.
 
-P. cinereus abundance as function of soil ph
-```{r}
-df %>%
-  group_by(soil.ph) %>%
-  drop_na(pca) %>%
-  filter(pca != 0) %>%
-  count(pca, sort = TRUE) %>%
-  ggplot(aes(x = soil.ph, y = n)) +
-  geom_jitter() +
-  geom_smooth()
-```
 
 ```{r}
 df %>%
   group_by(soil.ph, wt) %>%
   drop_na(wt) %>%
   ggplot(aes(x = soil.ph, y = wt)) +
-  geom_point()
+  geom_point() +
+  geom_smooth(method = "lm")
 ```
 
+It appears that there is little to no association between P. cinereus individual weights and soil pH, though there are more observations at lower pH values (e.g., hemlock-dominated sites), indicating that these sites are somewhat more favorable for some reason (whether pH or another factor)
 
+#### Morphometrics
+```{r warning = FALSE}
+df %>%
+  ggpairs(aes(color = sex), columns = c("wt", "tl", "svl"))
+```
 
-
-
-### Other herp morphometrics
 ```{r}
 herps %>%
   count(species, sort = TRUE)

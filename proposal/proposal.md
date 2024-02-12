@@ -24,8 +24,8 @@ Data was collected in 2005 by Brooks Mathewson and Elizabeth Colburn on
 properties owned by Harvard Forest and on state-owned land in
 north-central Massachusetts, within a 20-mile radius of the main Harvard
 Forest property in Petersham. Fifteen sites occupying a variety of
-mid-elevation forested areas were selected. Two paired, fixed-radius
-plots (each 0.33ha in area) were located within each site using random
+mid-elevation forested areas were selected. Two paired, fixed-radius df
+(each 0.33ha in area) were located within each site using random
 sampling stratified by forest type; one site of the pair being in a
 hemlock-dominated stand, the other being in a mixed deciduous stand.
 Hemlock-dominated sites were defined as having \>50% of total basal area
@@ -63,6 +63,7 @@ library(stringr)
 library(sf)
 library(ggspatial)
 library(readxl)
+library(GGally)
 ```
 
 ### Load Datafiles from GitHub Repository
@@ -190,6 +191,43 @@ glimpse(herps)
     ## $ tl      <dbl> NA, 30, 100, NA, NA, 60, 80, 60, 60, 45, 30, 60, 75, NA, NA, 7…
     ## $ weight  <dbl> NA, NA, 525, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, N…
 
+``` r
+# joining all except herps for now
+plots_aco <- left_join(plots, aco)
+```
+
+    ## Joining with `by = join_by(plot, asn)`
+
+``` r
+plots_aco_cwd <- left_join(plots_aco, cwd)
+```
+
+    ## Joining with `by = join_by(plot, site, ft, asn, cwd.no)`
+
+``` r
+plots_aco_cwd_trees <- left_join(plots_aco_cwd, trees)
+```
+
+    ## Joining with `by = join_by(plot, asn, species)`
+
+    ## Warning in left_join(plots_aco_cwd, trees): Detected an unexpected many-to-many relationship between `x` and `y`.
+    ## ℹ Row 1581 of `x` matches multiple rows in `y`.
+    ## ℹ Row 598 of `y` matches multiple rows in `x`.
+    ## ℹ If a many-to-many relationship is expected, set `relationship =
+    ##   "many-to-many"` to silence this warning.
+
+``` r
+df <- left_join(plots_aco_cwd_trees, pc)
+```
+
+    ## Joining with `by = join_by(plot, date, aco)`
+
+    ## Warning in left_join(plots_aco_cwd_trees, pc): Detected an unexpected many-to-many relationship between `x` and `y`.
+    ## ℹ Row 144 of `x` matches multiple rows in `y`.
+    ## ℹ Row 70 of `y` matches multiple rows in `x`.
+    ## ℹ If a many-to-many relationship is expected, set `relationship =
+    ##   "many-to-many"` to silence this warning.
+
 ## 3. Ethics review
 
 Limitations: Sampling design has no way to identify ‘recaptures’; if the
@@ -201,68 +239,93 @@ there may be some turnover in individuals salamanders using a cover
 board station. Data was collected over only a single season and may not
 be representative of P. cinereus population dynamics on a longer scale;
 another year may show different patterns of abundance and distribution
-and some factor other than forest type may be involved. Since this is an
-observational and not experimental study, there is no way to infer
-causation between any variables.
+and some factor other than forest type may be involved. Another
+limitation is that by introducing a novel habitat feature (cover
+boards), use of existing habitat features by herps is altered. Since
+this is an observational and not experimental study, there is no way to
+infer causation between any variables.
+
+Reasons for using data: I wanted to work with an ecological dataset for
+this project that encompassed a broad array of species-environment
+interactions. I chose this specific dataset out of personal interest in
+forest ecology and herpetology; and am using it to learn more about
+different techniques for analysis of ecological data, as well as to
+learn more about research design for ecological sampling. I declare no
+conflicting interests.
+
+Potential impacts: This data was not collected on human subjects. It
+does, however, have some potential impacts on how we address
+macroinvertebrate and herpetological communities in forest management,
+in specific regards to retaining habitat features that aid in supporting
+these communities, especially in the face of climate change and
+introduced tree pests and pathogens.
 
 ## 4. Data analysis plan
 
-### Convert degrees, minutes, seconds to decimal degrees
+### Convert degrees, decimal minutes to decimal degrees
+
+R did not recognize the degree signs used in the `hf131-01-plot.csv`
+file. I wasn’t able to find a simple function that converted degrees,
+decimal minutes to decimal degrees, so I used several string functions
+to replace the characters read in in place of the degree sign with a
+delimiter character, then calculate the difference manually.
 
 ``` r
 #latitude
-plots <- plots %>%
+df <- df %>%
   mutate(lat = str_replace_all(lat, "\xb0", ":"))
 
-plots <- plots %>%
+df <- df %>%
   mutate(lat = str_remove_all(lat, "N"))
 
-plots <- plots %>%
+df <- df %>%
   mutate(lat = str_remove_all(lat, "'"))
 
-plots <- plots %>%
+df <- df %>%
   mutate(lat = str_squish(lat))
 
 #longitude
-plots <- plots %>%
+df <- df %>%
   mutate(long = str_replace_all(long, "\xb0", ":"))
 
-plots <- plots %>%
+df <- df %>%
   mutate(long = str_remove_all(long, "W"))
 
-plots <- plots %>%
+df <- df %>%
   mutate(long = str_remove_all(long, "'"))
 
-plots <- plots %>%
+df <- df %>%
   mutate(long = str_squish(long))
 ```
 
 ``` r
 #extract values to create separate columns for degrees, decimal minutes, and hemisphere
 
-plots <- plots %>%
-  mutate(lat_deg = str_extract_all(plots$lat, "..(?=:)"),
-         lat_dm = str_extract_all(plots$lat, "(?<=:)......"),
-         long_deg = str_extract_all(plots$long, "..(?=:)"),
-         long_dm = str_extract_all(plots$long, "(?<=:)......"))
+df <- df %>%
+  mutate(lat_deg = str_extract_all(df$lat, "..(?=:)"),
+         lat_dm = str_extract_all(df$lat, "(?<=:)......"),
+         long_deg = str_extract_all(df$long, "..(?=:)"),
+         long_dm = str_extract_all(df$long, "(?<=:)......"))
 
-plots$lat_deg <- as.numeric(plots$lat_deg)
-plots$lat_dm <- as.numeric(plots$lat_dm)
-plots$long_deg <- as.numeric(plots$long_deg)
-plots$long_dm <- as.numeric(plots$long_dm)
+df$lat_deg <- as.numeric(df$lat_deg)
+df$lat_dm <- as.numeric(df$lat_dm)
+df$long_deg <- as.numeric(df$long_deg)
+df$long_dm <- as.numeric(df$long_dm)
 ```
 
 ``` r
-coords <- plots %>%
+coords <- df %>%
   select(plot, lat_deg, lat_dm, long_deg, long_dm) %>%
   mutate(lat_dd = lat_deg + lat_dm / 60,
          long_dd = long_deg + long_dm / 60) %>%
   select(plot, lat_dd, long_dd)
 
+# this converts all values in the the `long_dd` variable to negative.
 coords$long_dd <- coords$long_dd*(-1)
 
-plots$lat_dd <- coords$lat_dd
-plots$long_dd <- coords$long_dd
+# this saves the new coordinates in decimal degrees to the main dataframe, but it leaves a separate smaller `coords` dataframe to work with.
+df$lat_dd <- coords$lat_dd
+df$long_dd <- coords$long_dd
 ```
 
 ``` r
@@ -271,17 +334,20 @@ coords %>%
   geom_point()
 ```
 
-    ## Warning: Removed 3 rows containing missing values (`geom_point()`).
+    ## Warning: Removed 48 rows containing missing values (`geom_point()`).
 
-![](proposal_files/figure-gfm/unnamed-chunk-4-1.png)<!-- -->
+![](proposal_files/figure-gfm/unnamed-chunk-5-1.png)<!-- -->
 
-Based on the coordinates plotted here, data was collected within about
-fifteen miles of Harvard Forest (HF) in Petersham, Massachusetts. The
-central clusters of points appear to be from the HF properties in
-Petersham; the southeastern cluster is from Mount Wachusett, and the
-northern and western clusters on state land in the towns of Northfield,
-Warwick, and Royalston. This provides a useful reference as to the
-spatial scale of this project.
+Based on the coordinates plotted here, data was collected within twenty
+miles of Harvard Forest (HF) in Petersham, MA. The central clusters of
+points appear to be from the HF properties in Petersham; the
+southeastern cluster is from Mount Wachusett, and the northern and
+western clusters on state land in the towns of Northfield, Warwick, and
+Royalston. This provides a useful reference as to the spatial scale of
+this project.
+
+I will also load in shapefiles of Massachusetts town boundaries, along
+with state-owned land, and any applicable layers in the HF GIS.
 
 ``` r
 mass_towns <- st_read("/cloud/project/data/Community Boundaries (Towns) from Survey Points.shp")
@@ -301,66 +367,65 @@ ggplot(mass_towns) +
   geom_point(data = coords, (aes(x = long_dd, y = lat_dd)), color = "black", alpha = 0.5)
 ```
 
-    ## Warning: Removed 3 rows containing missing values (`geom_point()`).
+    ## Warning: Removed 48 rows containing missing values (`geom_point()`).
 
-![](proposal_files/figure-gfm/unnamed-chunk-6-1.png)<!-- -->
+![](proposal_files/figure-gfm/unnamed-chunk-7-1.png)<!-- -->
 
 Not sure why I’m getting this mismatch in coordinates. My points appear
-in the correct location when plotted with X/Y coordinates, but they’re
-showing up about 8 degrees too far south and a little west when plotted
-with this shapefile of Massachusetts towns. Maybe because the points
-don’t have a coordinate reference system assigned? I haven’t had this
-issue before though. I’ll try loading these points into ArcGIS to see if
-I figure out the source of the issue.
+in the correct location when plotted with X/Y coordinates only, but
+they’re showing up about 8 degrees too far south and a little west when
+plotted with this shapefile of Massachusetts towns. Maybe because the
+points don’t have a coordinate reference system assigned? I haven’t had
+this issue before though. I’ll try loading these points into ArcGIS to
+see if I can figure out the source of the issue.
 
-### Join data files
+### Preliminary hypotheses
 
-``` r
-# joining all except herps for now
-plots_aco <- full_join(plots, aco)
-```
+#### P. cinereus abundance is different between hemlock-dominated and mixed deciduous forest types.
 
-    ## Joining with `by = join_by(plot, asn)`
+T-test/simple linear model. Explanatory variable: forest type Response
+variable: P. cinereus abundance
 
-``` r
-plots_aco_cwd <- full_join(plots_aco, cwd)
-```
+#### Hemlock forests offer an important refugae for P. cinereus by shading the forest floor and maintaining more stable soil temperature.
 
-    ## Joining with `by = join_by(plot, site, ft, asn, cwd.no)`
+Generalized linear model. Explanatory variable: air temperature, forest
+type Response variables: soil temperature
 
-``` r
-plots_aco_cwd_trees <- full_join(plots_aco_cwd, trees)
-```
+#### P. cinereus abundance is positively correlated with older, more structurally complex forest stands.
 
-    ## Joining with `by = join_by(plot, asn, species)`
+Multivariate regression. Explanatory variables: basal area, coarse woody
+debris, mean stand diameter. Response variable: P. cinereus abundance.
 
-    ## Warning in full_join(plots_aco_cwd, trees): Detected an unexpected many-to-many relationship between `x` and `y`.
-    ## ℹ Row 1581 of `x` matches multiple rows in `y`.
-    ## ℹ Row 598 of `y` matches multiple rows in `x`.
-    ## ℹ If a many-to-many relationship is expected, set `relationship =
-    ##   "many-to-many"` to silence this warning.
+#### P. cinereus abundance is positively correlated with higher volumes of coarse woody debris.
 
-``` r
-df <- full_join(plots_aco_cwd_trees, pc)
-```
+Simple linear model. Explanatory variable: coarse woody debris volume
+Response variable: P. cinereus abundance
 
-    ## Joining with `by = join_by(plot, date, aco)`
+#### P. cinereus are larger/heavier where coarse wood debris volume is higher.
 
-    ## Warning in full_join(plots_aco_cwd_trees, pc): Detected an unexpected many-to-many relationship between `x` and `y`.
-    ## ℹ Row 144 of `x` matches multiple rows in `y`.
-    ## ℹ Row 70 of `y` matches multiple rows in `x`.
-    ## ℹ If a many-to-many relationship is expected, set `relationship =
-    ##   "many-to-many"` to silence this warning.
+Simple linear model. Explanatory variable: coarse woody debris volume
+Response variables: total length, snout-vent length, weight.
 
-### Forest Structure / Environmental conditions
+#### P. cinereus sexes are morphologically similar between forest types.
+
+Multivariate regression/MANOVA (if applicable) Explanatory variables:
+sex, forest type Response variables: total length, snout-vent length,
+weight (as matrix if MANOVA).
+
+In addition to these preliminary hypotheses and analytical methods, I
+would be interested in using non-linear modelling and bootstrapping if
+any biologically relevant variables violate assumptions of normality or
+have a non-linear associations.
+
+### Exploratory visualizations
+
+#### Forest Structure / Environmental conditions
 
 ``` r
 df %>%
   ggplot(aes(x = site, y = soil.ph, fill = ft)) +
   geom_boxplot()
 ```
-
-    ## Warning: Removed 7502 rows containing non-finite values (`stat_boxplot()`).
 
 ![](proposal_files/figure-gfm/unnamed-chunk-8-1.png)<!-- -->
 
@@ -375,8 +440,6 @@ df %>%
   geom_boxplot()
 ```
 
-    ## Warning: Removed 7502 rows containing non-finite values (`stat_boxplot()`).
-
 ![](proposal_files/figure-gfm/unnamed-chunk-9-1.png)<!-- -->
 
 Boxplot of basal area (m2/ha) by site. Hemlock dominated sites have
@@ -388,21 +451,19 @@ df %>%
   geom_jitter() +
   theme_bw() +
   labs(title = "Coarse Woody Debris and Basal Area",
+       subtitle = "By Forest Type",
        x = "Basal area (m2/ha)",
        y = "CWD volume (m3)")
 ```
 
-    ## Warning: Removed 7502 rows containing missing values (`geom_point()`).
+![](proposal_files/figure-gfm/unnamed-chunk-10-1.png)<!-- -->
 
-![](proposal_files/figure-gfm/unnamed-chunk-10-1.png)<!-- --> Coarse
-woody debris volume is higher in stands with lower basal area, which is
-reasonable given that areas that were recently affected by blowdown
-events should have higher CWD and lower BA, but very dense stands (high
-BA) should have less CWD. Coloring the points by forest type, we see
-that it is primarily hemlock-dominated plots that have high BA and low
-CWD, and hardwood sites have lower BA and higher CWD volume.
-
-#### Is soil temp more or less associated with air temperature in hemlock dominated vs mixed-deciduous plots?
+Coarse woody debris volume is higher in stands with lower basal area,
+which is reasonable given that areas that were recently affected by
+blowdown events should have higher CWD and lower BA, but very dense
+stands (high BA) should have less CWD. Coloring the points by forest
+type, we see that it is primarily hemlock-dominated df that have high BA
+and low CWD, and hardwood sites have lower BA and higher CWD volume.
 
 ``` r
 df %>%
@@ -418,64 +479,114 @@ df %>%
 
     ## `geom_smooth()` using formula = 'y ~ x'
 
-![](proposal_files/figure-gfm/unnamed-chunk-11-1.png)<!-- --> Modelling
-soil temperature as a function of air temperature and forest type
-indicates that there is not much sheltering effect of hemlock-dominated
-canopy cover on soil temperature, which could be an important factor for
-P. cinereus abundance.
+![](proposal_files/figure-gfm/unnamed-chunk-11-1.png)<!-- -->
 
-### Plethodon cinereus abundance
+Modelling soil temperature as a function of air temperature and forest
+type indicates that there is not much sheltering effect of
+hemlock-dominated canopy cover on soil temperature, which could be an
+important factor for P. cinereus abundance.
 
-63
+#### Plethodon cinereus abundance
 
 ``` r
-df %>%
-  group_by(plot, site) %>%
+# creating new dataframe called pc_abund for P. cinereus abundance, grouped by plot, site, and forest type.
+pc_abund <- df %>%
+  group_by(plot, site, ft) %>%
   drop_na(pca) %>%
   filter(pca != 0) %>%
   count(pca, sort = TRUE) %>%
-  summarise(n_ind = sum(n*pca)) %>%
-  arrange(desc(n_ind))
+  summarise(n_ind = sum(n*pca))
 ```
 
-    ## `summarise()` has grouped output by 'plot'. You can override using the
+    ## `summarise()` has grouped output by 'plot', 'site'. You can override using the
     ## `.groups` argument.
 
-    ## # A tibble: 29 × 3
-    ## # Groups:   plot [29]
-    ##    plot  site  n_ind
-    ##    <chr> <chr> <dbl>
-    ##  1 SC1TS SC1      63
-    ##  2 WSFMD WSF      23
-    ##  3 ER2TS ER2      22
-    ##  4 TS1TS TS1      22
-    ##  5 ER2MD ER2      19
-    ##  6 SC2TS SC2      17
-    ##  7 NSFTS NSF      12
-    ##  8 WA3MD WA3      12
-    ##  9 NSFMD NSF      11
-    ## 10 SC2MD SC2      11
+``` r
+pc_abund
+```
+
+    ## # A tibble: 29 × 4
+    ## # Groups:   plot, site [29]
+    ##    plot   site  ft    n_ind
+    ##    <chr>  <chr> <chr> <dbl>
+    ##  1 BHMD   BH    MD        8
+    ##  2 BHTS   BH    TS        1
+    ##  3 ER1MD  ER1   MD        6
+    ##  4 ER1TS  ER1   TS        7
+    ##  5 ER2MD  ER2   MD       19
+    ##  6 ER2TS  ER2   TS       22
+    ##  7 MGSFMD MGSF  MD        5
+    ##  8 MGSFTS MGSF  TS        5
+    ##  9 MRMD   MR    MD        1
+    ## 10 MRTS   MR    TS        3
     ## # ℹ 19 more rows
 
 ``` r
-df %>%
-  group_by(ft) %>%
-  drop_na(pca) %>%
-  filter(pca != 0) %>%
-  count(pca, sort = TRUE) %>%
-  summarise(n_ind = sum(n*pca)) %>%
-  group_by(ft) %>%
-  summarise(mean = mean(n_ind))
+pc_abund %>%
+  group_by(site) %>%
+  summarise(mean = mean(n_ind),
+            sd = sd(n_ind))
 ```
 
-    ## # A tibble: 2 × 2
-    ##   ft     mean
-    ##   <chr> <dbl>
-    ## 1 MD      127
-    ## 2 TS      196
+    ## # A tibble: 15 × 3
+    ##    site   mean     sd
+    ##    <chr> <dbl>  <dbl>
+    ##  1 BH      4.5  4.95 
+    ##  2 ER1     6.5  0.707
+    ##  3 ER2    20.5  2.12 
+    ##  4 MGSF    5    0    
+    ##  5 MR      2    1.41 
+    ##  6 NSF    11.5  0.707
+    ##  7 PH      6.5  2.12 
+    ##  8 SC1    33.5 41.7  
+    ##  9 SC2    14    4.24 
+    ## 10 TS1    13   12.7  
+    ## 11 TS2     8.5  0.707
+    ## 12 WA1     3.5  3.54 
+    ## 13 WA2    10   NA    
+    ## 14 WA3    10.5  2.12 
+    ## 15 WSF    17    8.49
 
-P. cinereus abundance is higher in hemlock dominated forest (mean = 53
-individuals), than in mixed deciduous forest (mean = 37 individuals).
+``` r
+pc_abund %>%
+  group_by(ft) %>%
+  ggplot(aes(x = site, y = n_ind)) +
+  geom_boxplot()
+```
+
+![](proposal_files/figure-gfm/unnamed-chunk-13-1.png)<!-- -->
+
+Boxplot of P. cinereus abundance by site. Mean abundance is highest at
+sites SC1, ER2, and WSF. Site MR has the lowest mean abundance. SC1 and
+TS1 have the greatest variance. Refer to table for exact mean and
+standard deviation values.
+
+``` r
+pc_abund %>%
+  group_by(ft) %>%
+  summarise(mean = mean(n_ind),
+            sd = sd(n_ind))
+```
+
+    ## # A tibble: 2 × 3
+    ##   ft     mean    sd
+    ##   <chr> <dbl> <dbl>
+    ## 1 MD     9.07  5.97
+    ## 2 TS    13.1  15.3
+
+``` r
+pc_abund %>%
+  group_by(ft) %>%
+  ggplot(aes(x = ft, y = n_ind)) +
+  geom_boxplot()
+```
+
+![](proposal_files/figure-gfm/unnamed-chunk-14-1.png)<!-- -->
+
+P. cinereus abundance is higher in hemlock-dominated plots (mean = 13
++/- 15 individuals), than in mixed deciduous forest (mean = 9 +/- 6
+individuals). This shows us that while hemlock-dominated plots had more
+individuals, they also had greater variation in abundance.
 
 ``` r
 df %>%
@@ -493,38 +604,41 @@ df %>%
 
     ## `geom_smooth()` using formula = 'y ~ x'
 
-![](proposal_files/figure-gfm/unnamed-chunk-14-1.png)<!-- -->
-
-P. cinereus abundance as function of soil ph
-
-``` r
-df %>%
-  group_by(soil.ph) %>%
-  drop_na(pca) %>%
-  filter(pca != 0) %>%
-  count(pca, sort = TRUE) %>%
-  ggplot(aes(x = soil.ph, y = n)) +
-  geom_jitter() +
-  geom_smooth()
-```
-
-    ## `geom_smooth()` using method = 'loess' and formula = 'y ~ x'
-
-![](proposal_files/figure-gfm/unnamed-chunk-15-1.png)<!-- -->
+![](proposal_files/figure-gfm/unnamed-chunk-15-1.png)<!-- --> P.
+cinereus abundance appears that it may be greater at lower coarse woody
+debris volumes, though the linear model suggests that there is high
+variability at high CWD volume values, given the paucity of
+observations. This may simply be an effect of limited sampling in high
+CWD sites, and/or an effect of introducing novel habitat features (cover
+boards), which are not representative of existing habitat features.
 
 ``` r
 df %>%
   group_by(soil.ph, wt) %>%
   drop_na(wt) %>%
   ggplot(aes(x = soil.ph, y = wt)) +
-  geom_point()
+  geom_point() +
+  geom_smooth(method = "lm")
 ```
 
-    ## Warning: Removed 6 rows containing missing values (`geom_point()`).
+    ## `geom_smooth()` using formula = 'y ~ x'
 
 ![](proposal_files/figure-gfm/unnamed-chunk-16-1.png)<!-- -->
 
-### Other herp morphometrics
+It appears that there is little to no association between P. cinereus
+individual weights and soil pH, though there are more observations at
+lower pH values (e.g., hemlock-dominated sites), indicating that these
+sites are somewhat more favorable for some reason (whether pH or another
+factor)
+
+#### Morphometrics
+
+``` r
+df %>%
+  ggpairs(aes(color = sex), columns = c("wt", "tl", "svl"))
+```
+
+![](proposal_files/figure-gfm/unnamed-chunk-17-1.png)<!-- -->
 
 ``` r
 herps %>%
@@ -550,7 +664,7 @@ herps %>%
 
     ## Warning: Removed 11 rows containing non-finite values (`stat_boxplot()`).
 
-![](proposal_files/figure-gfm/unnamed-chunk-18-1.png)<!-- -->
+![](proposal_files/figure-gfm/unnamed-chunk-19-1.png)<!-- -->
 
 ``` r
 df %>%
@@ -558,6 +672,6 @@ df %>%
   geom_point()
 ```
 
-    ## Warning: Removed 9717 rows containing missing values (`geom_point()`).
+    ## Warning: Removed 2215 rows containing missing values (`geom_point()`).
 
-![](proposal_files/figure-gfm/unnamed-chunk-19-1.png)<!-- -->
+![](proposal_files/figure-gfm/unnamed-chunk-20-1.png)<!-- -->
