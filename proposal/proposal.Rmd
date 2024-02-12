@@ -49,6 +49,10 @@ glimpse(herps)
 ## 3. Ethics review
 Limitations:  Sampling design has no way to identify 'recaptures'; if the same salamanders were staying at or returning to the same cover board across multiple sampling days, there is no definitive way to identify how these individuals are impacting counts.  The 2-3 week sampling interval may actually help to address this pseudoreplication, since there may be some turnover in individuals salamanders using a cover board station.  Data was collected over only a single season and may not be representative of P. cinereus population dynamics on a longer scale; another year may show different patterns of abundance and distribution and some factor other than forest type may be involved.  Since this is an observational and not experimental study, there is no way to infer causation between any variables.
 
+Reasons for using data:  I wanted to work with an ecological dataset for this project that encompassed a broad array of species-environment interactions.  I chose this specific dataset out of personal interest in forest ecology and herpetology; and am using it to learn more about different techniques for analysis of ecological data, as well as to learn more about research design for ecological sampling.  I declare no conflicting interests.
+
+Potential impacts:  This data was not collected on human subjects.  It does, however, have some potential impacts on how we address macroinvertebrate and herpetological communities in forest management, in specific regards to retaining habitat features that aid in supporting these communities, especially in the face of climate change and introduced tree pests and pathogens.
+
 ## 4. Data analysis plan
 ### Convert degrees, minutes, seconds to decimal degrees
 
