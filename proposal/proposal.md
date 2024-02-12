@@ -6,7 +6,53 @@ Joshua A. Harkness
 
 ## 1. Introduction
 
+For my final project in Data Science II, I decided to use a dataset
+comparing eastern red-backed salamander (Plethodon cinereus) abundance
+and distribution across different forest types in north-central
+Massachusetts. Harvard Forest has been involved in a number of
+observational and experimental studies of changes in forest composition,
+structure, and biodiversity relating to loss of important tree species
+due to introduced pathogens; one of their main projects has been the
+experimental removal of hemlock (Tsuga canadensis) to simulate the loss
+of this species due to hemlock woolly adelgid (HWA) (Adelges tsugae).
+This project is one of several observational studies relating to
+biodiversity in hemlock-dominated forest stands, and how plant,
+invertebrate, and vertebrate communities may be affected by the loss of
+hemlock.
+
+Data was collected in 2005 by Brooks Mathewson and Elizabeth Colburn on
+properties owned by Harvard Forest and on state-owned land in
+north-central Massachusetts, within a 20-mile radius of the main Harvard
+Forest property in Petersham. Fifteen sites occupying a variety of
+mid-elevation forested areas were selected. Two paired, fixed-radius
+plots (each 0.33ha in area) were located within each site using random
+sampling stratified by forest type; one site of the pair being in a
+hemlock-dominated stand, the other being in a mixed deciduous stand.
+Hemlock-dominated sites were defined as having \>50% of total basal area
+(BA) being hemlock, and mixed deciduous as \<25% of total BA being
+hemlock. Each plot center was used as an intersection between two
+perpendicular 50m transects, along which pairs of cover boards (ACO
+stations) were placed at the transect ends and intersection. Cover
+boards were sampled once every 2-3 weeks from June 13th until November
+4th 2005. All amphibian and reptile species detected under cover boards
+were recorded along with basic morphometrics; for P. cinereus, total
+length, snout-vent length, weight, phase, and sex were recorded. For all
+other herps, snout-vent length was recorded.
+
+Data was published in six separate .csv files, one including plot
+number, site, topography, location, forest type, etc., another, one
+including forest inventory data from each plot, one including coarse
+woody debris (CWD) measurements for each plot, one including all cover
+board observations, one including P. cinereus abundance and
+morphometrics, and another including abundance and morphometrics for all
+other herps observed.
+
 ## 2. Data
+
+Data citation: Mathewson B, Colburn E. 2023. Eastern Redback Salamander
+Abundance in North Central Massachusetts 2005. Harvard Forest Data
+Archive: HF131 (v.14). Environmental Data Initiative:
+<https://doi.org/10.6073/pasta/4107874d4233c79b05929c7a93a60ca4>.
 
 ### Load Packages
 
@@ -143,6 +189,23 @@ glimpse(herps)
     ## $ svl     <dbl> 7, NA, 45, NA, NA, 35, 40, 35, 35, 30, 20, 35, 35, NA, NA, 35,…
     ## $ tl      <dbl> NA, 30, 100, NA, NA, 60, 80, 60, 60, 45, 30, 60, 75, NA, NA, 7…
     ## $ weight  <dbl> NA, NA, 525, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, N…
+
+## 3. Ethics review
+
+Limitations: Sampling design has no way to identify ‘recaptures’; if the
+same salamanders were staying at or returning to the same cover board
+across multiple sampling days, there is no definitive way to identify
+how these individuals are impacting counts. The 2-3 week sampling
+interval may actually help to address this pseudoreplication, since
+there may be some turnover in individuals salamanders using a cover
+board station. Data was collected over only a single season and may not
+be representative of P. cinereus population dynamics on a longer scale;
+another year may show different patterns of abundance and distribution
+and some factor other than forest type may be involved. Since this is an
+observational and not experimental study, there is no way to infer
+causation between any variables.
+
+## 4. Data analysis plan
 
 ### Convert degrees, minutes, seconds to decimal degrees
 
@@ -289,10 +352,6 @@ df <- full_join(plots_aco_cwd_trees, pc)
     ## ℹ If a many-to-many relationship is expected, set `relationship =
     ##   "many-to-many"` to silence this warning.
 
-## 3. Ethics review
-
-## 4. Data analysis plan
-
 ### Forest Structure / Environmental conditions
 
 ``` r
@@ -367,29 +426,36 @@ P. cinereus abundance.
 
 ### Plethodon cinereus abundance
 
+63
+
 ``` r
 df %>%
   group_by(plot, site) %>%
   drop_na(pca) %>%
   filter(pca != 0) %>%
-  count(pca, sort = TRUE)
+  count(pca, sort = TRUE) %>%
+  summarise(n_ind = sum(n*pca)) %>%
+  arrange(desc(n_ind))
 ```
 
-    ## # A tibble: 43 × 4
-    ## # Groups:   plot, site [29]
-    ##    plot  site    pca     n
-    ##    <chr> <chr> <dbl> <int>
-    ##  1 SC1TS SC1       1    39
-    ##  2 WSFMD WSF       1    15
-    ##  3 ER2TS ER2       1    14
-    ##  4 SC2TS SC2       1    13
-    ##  5 SC1TS SC1       2    12
-    ##  6 WA3MD WA3       1    12
-    ##  7 NSFMD NSF       1    11
-    ##  8 ER2MD ER2       1    10
-    ##  9 TS1TS TS1       1     9
-    ## 10 WA3TS WA3       1     9
-    ## # ℹ 33 more rows
+    ## `summarise()` has grouped output by 'plot'. You can override using the
+    ## `.groups` argument.
+
+    ## # A tibble: 29 × 3
+    ## # Groups:   plot [29]
+    ##    plot  site  n_ind
+    ##    <chr> <chr> <dbl>
+    ##  1 SC1TS SC1      63
+    ##  2 WSFMD WSF      23
+    ##  3 ER2TS ER2      22
+    ##  4 TS1TS TS1      22
+    ##  5 ER2MD ER2      19
+    ##  6 SC2TS SC2      17
+    ##  7 NSFTS NSF      12
+    ##  8 WA3MD WA3      12
+    ##  9 NSFMD NSF      11
+    ## 10 SC2MD SC2      11
+    ## # ℹ 19 more rows
 
 ``` r
 df %>%
@@ -397,38 +463,16 @@ df %>%
   drop_na(pca) %>%
   filter(pca != 0) %>%
   count(pca, sort = TRUE) %>%
-  summarise(mean(n))
+  summarise(n_ind = sum(n*pca)) %>%
+  group_by(ft) %>%
+  summarise(mean = mean(n_ind))
 ```
 
     ## # A tibble: 2 × 2
-    ##   ft    `mean(n)`
-    ##   <chr>     <dbl>
-    ## 1 MD         37  
-    ## 2 TS         53.3
-
-``` r
-df %>%
-  group_by(site) %>%
-  drop_na(pca) %>%
-  filter(pca != 0) %>%
-  count(pca, sort = TRUE) %>%
-  ggplot(aes(x = site, y = n)) +
-  geom_boxplot()
-```
-
-![](proposal_files/figure-gfm/unnamed-chunk-14-1.png)<!-- -->
-
-``` r
-df %>%
-  group_by(ft) %>%
-  drop_na(pca) %>%
-  filter(pca != 0) %>%
-  count(pca, sort = TRUE) %>%
-  ggplot(aes(x = ft, y = n)) +
-  geom_boxplot()
-```
-
-![](proposal_files/figure-gfm/unnamed-chunk-15-1.png)<!-- -->
+    ##   ft     mean
+    ##   <chr> <dbl>
+    ## 1 MD      127
+    ## 2 TS      196
 
 P. cinereus abundance is higher in hemlock dominated forest (mean = 53
 individuals), than in mixed deciduous forest (mean = 37 individuals).
@@ -449,7 +493,7 @@ df %>%
 
     ## `geom_smooth()` using formula = 'y ~ x'
 
-![](proposal_files/figure-gfm/unnamed-chunk-16-1.png)<!-- -->
+![](proposal_files/figure-gfm/unnamed-chunk-14-1.png)<!-- -->
 
 P. cinereus abundance as function of soil ph
 
@@ -466,7 +510,7 @@ df %>%
 
     ## `geom_smooth()` using method = 'loess' and formula = 'y ~ x'
 
-![](proposal_files/figure-gfm/unnamed-chunk-17-1.png)<!-- -->
+![](proposal_files/figure-gfm/unnamed-chunk-15-1.png)<!-- -->
 
 ``` r
 df %>%
@@ -478,7 +522,7 @@ df %>%
 
     ## Warning: Removed 6 rows containing missing values (`geom_point()`).
 
-![](proposal_files/figure-gfm/unnamed-chunk-18-1.png)<!-- -->
+![](proposal_files/figure-gfm/unnamed-chunk-16-1.png)<!-- -->
 
 ### Other herp morphometrics
 
@@ -506,7 +550,7 @@ herps %>%
 
     ## Warning: Removed 11 rows containing non-finite values (`stat_boxplot()`).
 
-![](proposal_files/figure-gfm/unnamed-chunk-20-1.png)<!-- -->
+![](proposal_files/figure-gfm/unnamed-chunk-18-1.png)<!-- -->
 
 ``` r
 df %>%
@@ -516,4 +560,4 @@ df %>%
 
     ## Warning: Removed 9717 rows containing missing values (`geom_point()`).
 
-![](proposal_files/figure-gfm/unnamed-chunk-21-1.png)<!-- -->
+![](proposal_files/figure-gfm/unnamed-chunk-19-1.png)<!-- -->

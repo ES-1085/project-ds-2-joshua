@@ -7,9 +7,15 @@ output: github_document
 
 
 ## 1. Introduction
+For my final project in Data Science II, I decided to use a dataset comparing eastern red-backed salamander (Plethodon cinereus) abundance and distribution across different forest types in north-central Massachusetts.  Harvard Forest has been involved in a number of observational and experimental studies of changes in forest composition, structure, and biodiversity relating to loss of important tree species due to introduced pathogens; one of their main projects has been the experimental removal of hemlock (Tsuga canadensis) to simulate the loss of this species due to hemlock woolly adelgid (HWA) (Adelges tsugae).  This project is one of several observational studies relating to biodiversity in hemlock-dominated forest stands, and how plant, invertebrate, and vertebrate communities may be affected by the loss of hemlock.
 
+Data was collected in 2005 by Brooks Mathewson and Elizabeth Colburn on properties owned by Harvard Forest and on state-owned land in north-central Massachusetts, within a 20-mile radius of the main Harvard Forest property in Petersham.  Fifteen sites occupying a variety of mid-elevation forested areas were selected.  Two paired, fixed-radius plots (each 0.33ha in area) were located within each site using random sampling stratified by forest type; one site of the pair being in a hemlock-dominated stand, the other being in a mixed deciduous stand.  Hemlock-dominated sites were defined as having >50% of total basal area (BA) being hemlock, and mixed deciduous as <25% of total BA being hemlock.  Each plot center was used as an intersection between two perpendicular 50m transects, along which pairs of cover boards (ACO stations) were placed at the transect ends and intersection.  Cover boards were sampled once every 2-3 weeks from June 13th until November 4th 2005.  All amphibian and reptile species detected under cover boards were recorded along with basic morphometrics; for P. cinereus, total length, snout-vent length, weight, phase, and sex were recorded.  For all other herps, snout-vent length was recorded.
+
+Data was published in six separate .csv files, one including plot number, site, topography, location, forest type, etc., another, one including forest inventory data from each plot, one including coarse woody debris (CWD) measurements for each plot, one including all cover board observations, one including P. cinereus abundance and morphometrics, and another including abundance and morphometrics for all other herps observed.
 
 ## 2. Data
+Data citation: Mathewson B, Colburn E. 2023. Eastern Redback Salamander Abundance in North Central Massachusetts 2005. Harvard Forest Data Archive: HF131 (v.14). Environmental Data Initiative: https://doi.org/10.6073/pasta/4107874d4233c79b05929c7a93a60ca4.
+
 ### Load Packages
 ```{r load-packages, message = FALSE}
 library(tidyverse)
@@ -39,6 +45,11 @@ glimpse(pc)
 glimpse(herps)
 ```
 
+
+## 3. Ethics review
+Limitations:  Sampling design has no way to identify 'recaptures'; if the same salamanders were staying at or returning to the same cover board across multiple sampling days, there is no definitive way to identify how these individuals are impacting counts.  The 2-3 week sampling interval may actually help to address this pseudoreplication, since there may be some turnover in individuals salamanders using a cover board station.  Data was collected over only a single season and may not be representative of P. cinereus population dynamics on a longer scale; another year may show different patterns of abundance and distribution and some factor other than forest type may be involved.  Since this is an observational and not experimental study, there is no way to infer causation between any variables.
+
+## 4. Data analysis plan
 ### Convert degrees, minutes, seconds to decimal degrees
 
 ```{r}
@@ -126,9 +137,7 @@ plots_aco_cwd_trees <- full_join(plots_aco_cwd, trees)
 df <- full_join(plots_aco_cwd_trees, pc)
 ```
 
-## 3. Ethics review
 
-## 4. Data analysis plan
 ### Forest Structure / Environmental conditions
 ```{r}
 df %>%
