@@ -5,6 +5,12 @@ date: "2024-02-02"
 output: github_document
 ---
 
+
+## 1. Introduction
+
+
+## 2. Data
+### Load Packages
 ```{r load-packages, message = FALSE}
 library(tidyverse)
 library(broom)
@@ -13,13 +19,6 @@ library(sf)
 library(ggspatial)
 library(readxl)
 ```
-
-## 1. Introduction
-
-
-
-## 2. Data
-### Load Packages
 
 ### Load Datafiles from GitHub Repository
 ```{r load-data-files, message = FALSE}
@@ -33,6 +32,7 @@ herps <- read_csv("/cloud/project/data/hf131-06-herps.csv")
 
 ```{r glimpse-data-files}
 glimpse(plots)
+glimpse(trees)
 glimpse(cwd)
 glimpse(aco)
 glimpse(pc)
@@ -72,7 +72,6 @@ plots <- plots %>%
 ```{r}
 #extract values to create separate columns for degrees, decimal minutes, and hemisphere
 
-
 plots <- plots %>%
   mutate(lat_deg = str_extract_all(plots$lat, "..(?=:)"),
          lat_dm = str_extract_all(plots$lat, "(?<=:)......"),
@@ -104,15 +103,15 @@ coords %>%
   geom_point()
 ```
 
-Based on the coordinates plotted here, data was collected within about fifteen miles of Harvard Forest in Petersham, Massachusetts.  The central clusters of points appear to be from the HF properties in Petersham; the southeastern cluster is from Mount Wachusett, and the northern and western clusters on state land in the towns of Northfield, Warwick, and Royalston.  This provides a useful reference as to the spatial scale of this project.
+Based on the coordinates plotted here, data was collected within about fifteen miles of Harvard Forest (HF) in Petersham, Massachusetts.  The central clusters of points appear to be from the HF properties in Petersham; the southeastern cluster is from Mount Wachusett, and the northern and western clusters on state land in the towns of Northfield, Warwick, and Royalston.  This provides a useful reference as to the spatial scale of this project.
 
 ```{r}
 mass_towns <- st_read("/cloud/project/data/Community Boundaries (Towns) from Survey Points.shp")
 ```
 ```{r}
 ggplot(mass_towns) +
-  geom_sf() #+
-#  geom_point(data = coords, (aes(x = long_dd, y = lat_dd)), color = "black", alpha = 0.5)
+  geom_sf() +
+  geom_point(data = coords, (aes(x = long_dd, y = lat_dd)), color = "black", alpha = 0.5)
 ```
 
 Not sure why I'm getting this mismatch in coordinates.  My points appear in the correct location when plotted with X/Y coordinates, but they're showing up about 8 degrees too far south and a little west when plotted with this shapefile of Massachusetts towns.  Maybe because the points don't have a coordinate reference system assigned?  I haven't had this issue before though.  I'll try loading these points into ArcGIS to see if I figure out the source of the issue.
@@ -121,19 +120,23 @@ Not sure why I'm getting this mismatch in coordinates.  My points appear in the 
 ### Join data files
 ```{r}
 # joining all except herps for now
-plots_aco <- left_join(plots, aco)
-plots_aco_cwd <- left_join(plots_aco, cwd)
-df <- left_join(plots_aco_cwd, pc)
+plots_aco <- full_join(plots, aco)
+plots_aco_cwd <- full_join(plots_aco, cwd)
+plots_aco_cwd_trees <- full_join(plots_aco_cwd, trees)
+df <- full_join(plots_aco_cwd_trees, pc)
 ```
 
+## 3. Ethics review
 
-### Exploratory Visualizations
-
+## 4. Data analysis plan
+### Forest Structure / Environmental conditions
 ```{r}
 df %>%
   ggplot(aes(x = site, y = soil.ph, fill = ft)) +
   geom_boxplot()
 ```
+
+Boxplot of soil pH by site.  Boxes are colored per forest type ("TS" = Tsuga canadensis dominated (>50% BA), "MD" = mixed-deciduous forest (hemlock <25% BA)).  Hemlock dominated stands are consistently more acidic than mixed deciduous stands with some outliers.
 
 ```{r}
 df %>%
@@ -141,42 +144,98 @@ df %>%
   geom_boxplot()
 ```
 
+Boxplot of basal area (m2/ha) by site.  Hemlock dominated sites have consistently higher BA than mixed deciduous sites.
+
 ```{r}
 df %>%
-  ggplot(aes(y = vcwd, x = ba)) +
-  geom_col() +
+  ggplot(aes(y = vcwd, x = ba, color = ft)) +
+  geom_jitter() +
   theme_bw() +
   labs(title = "Coarse Woody Debris and Basal Area",
        x = "Basal area (m2/ha)",
        y = "CWD volume (m3)")
 ```
-```{r}
+Coarse woody debris volume is higher in stands with lower basal area, which is reasonable given that areas that were recently affected by blowdown events should have higher CWD and lower BA, but very dense stands (high BA) should have less CWD.  Coloring the points by forest type, we see that it is primarily hemlock-dominated plots that have high BA and low CWD, and hardwood sites have lower BA and higher CWD volume.
+
+#### Is soil temp more or less associated with air temperature in hemlock dominated vs mixed-deciduous plots?
+```{r warning = FALSE}
 df %>%
+  filter(ft != "NA") %>%
   ggplot(aes(x = airt, y = soilt, shape = ft, color = ft)) +
   geom_point() +
-  geom_smooth(method = "lm")
+  geom_smooth(method = "lm", fullrange = TRUE, se = FALSE) +
+  labs(title = "Soil temp as function of air temp",
+       subtitle = "In hemlock and mixed deciduous forest",
+       x = "Air temp (°C)",
+       y = "Soil temp (°C)")
 ```
+Modelling soil temperature as a function of air temperature and forest type indicates that there is not much sheltering effect of hemlock-dominated canopy cover on soil temperature, which could be an important factor for P. cinereus abundance.
+
+
 
 ### Plethodon cinereus abundance
+63
+```{r}
+df %>%
+  group_by(plot, site) %>%
+  drop_na(pca) %>%
+  filter(pca != 0) %>%
+  count(pca, sort = TRUE) %>%
+  summarise(n_ind = sum(n*pca)) %>%
+  arrange(desc(n_ind))
+```
 
 ```{r}
 df %>%
-  count()
+  group_by(ft) %>%
+  drop_na(pca) %>%
+  filter(pca != 0) %>%
+  count(pca, sort = TRUE) %>%
+  summarise(n_ind = sum(n*pca)) %>%
+  group_by(ft) %>%
+  summarise(mean = mean(n_ind))
 ```
 
 
+P. cinereus abundance is higher in hemlock dominated forest (mean = 53 individuals), than in mixed deciduous forest (mean = 37 individuals).
+
 ```{r}
 df %>%
-  ggplot(aes(x = tl.x, y = wt)) +
-  geom_point() +
+  group_by(vcwd) %>%
+  drop_na(pca) %>%
+  filter(pca != 0) %>%
+  count(pca) %>%
+  ggplot(aes(x = vcwd, y = n)) +
+  geom_jitter() +
+  geom_smooth(method = "lm") +
+  labs(title = "P. cinereus abundance",
+       y = "n Observations",
+       x = "Volume CWD (m2)")
+```
+
+P. cinereus abundance as function of soil ph
+```{r}
+df %>%
+  group_by(soil.ph) %>%
+  drop_na(pca) %>%
+  filter(pca != 0) %>%
+  count(pca, sort = TRUE) %>%
+  ggplot(aes(x = soil.ph, y = n)) +
+  geom_jitter() +
   geom_smooth()
 ```
+
 ```{r}
 df %>%
-  drop_na(sex) %>%
-  ggplot(aes(x = sex, y = wt)) +
-  geom_boxplot()
+  group_by(soil.ph, wt) %>%
+  drop_na(wt) %>%
+  ggplot(aes(x = soil.ph, y = wt)) +
+  geom_point()
 ```
+
+
+
+
 
 ### Other herp morphometrics
 ```{r}
@@ -199,10 +258,6 @@ df %>%
   geom_point()
 ```
 
-
-## 3. Ethics review
-
-## 4. Data analysis plan
 
 
 
