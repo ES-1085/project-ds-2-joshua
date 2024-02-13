@@ -119,11 +119,12 @@ coords <- df %>%
 coords$lat_dd <- str_remove(coords$lat_dd, "'")
 
 # this converts all values in the the `long_dd` variable to negative.
-coords$long_dd <- coords$long_dd*(-1)
+coords$lat_dd <- as.numeric(coords$lat_dd)
+coords$long_dd <- as.numeric(coords$long_dd)*(-1)
 
 # this saves the new coordinates in decimal degrees to the main dataframe, but it leaves a separate smaller `coords` dataframe to work with.
-df$lat_dd <- coords$lat_dd
-df$long_dd <- coords$long_dd
+df$lat_dd <- as.numeric(coords$lat_dd)
+df$long_dd <- as.numeric(coords$long_dd)
 
 write_csv(coords, path = "/cloud/project/data/coords.csv")
 ```
@@ -131,7 +132,8 @@ write_csv(coords, path = "/cloud/project/data/coords.csv")
 ```{r plot-dd-coords}
 coords %>%
   ggplot(aes(x = long_dd, y = lat_dd)) +
-  geom_point()
+  geom_point() +
+  scale_y_continuous(breaks = seq(42, 43, by = 0.05))
 ```
 
 Based on the coordinates plotted here, data was collected within twenty miles of Harvard Forest (HF) in Petersham, MA.  The central clusters of points appear to be from the HF properties in Petersham; the southeastern cluster is from Mount Wachusett, and the northern and western clusters on state land in the towns of Northfield, Warwick, and Royalston.  This provides a useful reference as to the spatial scale of this project.
@@ -144,7 +146,8 @@ mass_towns <- st_read("/cloud/project/data/Community Boundaries (Towns) from Sur
 ```{r plot-mass_towns-coords}
 ggplot(mass_towns) +
   geom_sf() +
-  geom_point(data = coords, (aes(x = long_dd, y = lat_dd)), color = "black", alpha = 0.5)
+  geom_point(data = coords, (aes(x = long_dd, y = lat_dd)), color = "black", alpha = 0.5) +
+  scale_y_continuous(breaks = seq(42, 43, by = 0.05))
 ```
 
 Not sure why I'm getting this mismatch in coordinates.  My points appear in the correct location when plotted with X/Y coordinates only, but they're showing up about 8 degrees too far south and a little west when plotted with this shapefile of Massachusetts towns.  Maybe because the points don't have a coordinate reference system assigned?  I haven't had this issue before though.  I'll try loading these points into ArcGIS to see if I can figure out the source of the issue.
