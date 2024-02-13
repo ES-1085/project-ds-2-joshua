@@ -400,8 +400,8 @@ debris, mean stand diameter. Response variable: P. cinereus abundance.
 
 #### P. cinereus abundance is positively correlated with higher volumes of coarse woody debris.
 
-Simple linear model. Explanatory variable: coarse woody debris volume
-Response variable: P. cinereus abundance
+Generalized linear model (Poisson). Explanatory variable: coarse woody
+debris volume Response variable: P. cinereus abundance
 
 #### P. cinereus sexes are morphologically similar between forest types.
 
@@ -534,7 +534,8 @@ pc_abund %>%
 pc_abund %>%
   group_by(ft) %>%
   ggplot(aes(x = ft, y = n_ind)) +
-  geom_boxplot()
+  geom_boxplot() +
+  geom_jitter()
 ```
 
 ![](proposal_files/figure-gfm/calc-mean-sd-ft-and-boxplot-n_ind-ft-1.png)<!-- -->

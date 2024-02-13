@@ -166,7 +166,7 @@ Response variable: P. cinereus abundance.
 
 #### P. cinereus abundance is positively correlated with higher volumes of coarse woody debris.
 
-Simple linear model.
+Generalized linear model (Poisson).
 Explanatory variable: coarse woody debris volume
 Response variable: P. cinereus abundance
 
@@ -253,7 +253,8 @@ pc_abund %>%
 pc_abund %>%
   group_by(ft) %>%
   ggplot(aes(x = ft, y = n_ind)) +
-  geom_boxplot()
+  geom_boxplot() +
+  geom_jitter()
 ```
 
 P. cinereus abundance is higher in hemlock-dominated plots (mean = 13 +/- 15 individuals), than in mixed deciduous forest (mean = 9 +/- 6 individuals).  This shows us that while hemlock-dominated plots had more individuals, they also had greater variation in abundance.
