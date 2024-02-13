@@ -116,6 +116,8 @@ coords <- df %>%
          long_dd = long_deg + long_dm / 60) %>%
   select(plot, lat_dd, long_dd)
 
+coords$lat_dd <- str_remove(coords$lat_dd, "'")
+
 # this converts all values in the the `long_dd` variable to negative.
 coords$long_dd <- coords$long_dd*(-1)
 
