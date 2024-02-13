@@ -54,6 +54,8 @@ plots_aco <- left_join(plots, aco)
 plots_aco_cwd <- left_join(plots_aco, cwd)
 plots_aco_cwd_trees <- left_join(plots_aco_cwd, trees)
 df <- left_join(plots_aco_cwd_trees, pc)
+
+write_csv(df, "/cloud/project/data/df.csv")
 ```
 ## 3. Ethics review
 Limitations:  Sampling design has no way to identify 'recaptures'; if the same salamanders were staying at or returning to the same cover board across multiple sampling days, there is no definitive way to identify how these individuals are impacting counts.  The 2-3 week sampling interval may actually help to address this pseudoreplication, since there may be some turnover in individuals salamanders using a cover board station.  Data was collected over only a single season and may not be representative of P. cinereus population dynamics on a longer scale; another year may show different patterns of abundance and distribution and some factor other than forest type may be involved.  Another limitation is that by introducing a novel habitat feature (cover boards), use of existing habitat features by herps is altered.  Since this is an observational and not experimental study, there is no way to infer causation between any variables.
