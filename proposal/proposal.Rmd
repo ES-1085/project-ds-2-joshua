@@ -122,6 +122,8 @@ coords$long_dd <- coords$long_dd*(-1)
 # this saves the new coordinates in decimal degrees to the main dataframe, but it leaves a separate smaller `coords` dataframe to work with.
 df$lat_dd <- coords$lat_dd
 df$long_dd <- coords$long_dd
+
+write_csv(coords, path = "/cloud/project/data/coords.csv")
 ```
 
 ```{r plot-dd-coords}
@@ -233,9 +235,9 @@ Coarse woody debris volume is higher in stands with lower basal area, which is r
 
 #### Plethodon cinereus abundance
 ```{r create-pc_abund}
-# creating new dataframe called pc_abund for P. cinereus abundance, grouped by plot, site, and forest type.
+# creating new dataframe called pc_abund for P. cinereus abundance, grouped by plot, site, forest type, and sex.
 pc_abund <- df %>%
-  group_by(plot, site, ft) %>%
+  group_by(plot, site, ft, sex) %>%
   drop_na(pca) %>%
   filter(pca != 0) %>%
   count(pca, sort = TRUE) %>%
