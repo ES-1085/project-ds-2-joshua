@@ -83,10 +83,11 @@ coords <- coords %>%
          long_dd = long_deg + long_dm / 60)
 
 # this converts all values in the the `long_dd` variable to negative.
-coords$lat_dd <- as.numeric(coords$lat_dd)
-coords$long_dd <- as.numeric(coords$long_dd)*(-1)
+coords$lat_dd <- round(as.numeric(coords$lat_dd), 5)
+coords$long_dd <- round(as.numeric(coords$long_dd)*(-1), 5)
 
 # this saves the new coordinates in decimal degrees to the main dataframe, but it leaves a separate smaller `coords` dataframe to work with.
+
 df$lat_dd <- as.numeric(coords$lat_dd)
 df$long_dd <- as.numeric(coords$long_dd)
 
