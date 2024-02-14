@@ -230,6 +230,10 @@ df <- left_join(plots_aco_cwd_trees, pc)
     ## ℹ If a many-to-many relationship is expected, set `relationship =
     ##   "many-to-many"` to silence this warning.
 
+``` r
+write_csv(df, "/cloud/project/data/df.csv")
+```
+
 ## 3. Ethics review
 
 Limitations: Sampling design has no way to identify ‘recaptures’; if the
@@ -273,67 +277,43 @@ to replace the characters read in in place of the degree sign with a
 delimiter character, then calculate the difference manually.
 
 ``` r
-#latitude
-df <- df %>%
-  mutate(lat = str_replace_all(lat, "\xb0", ":"))
-
-df <- df %>%
-  mutate(lat = str_remove_all(lat, "N"))
-
-df <- df %>%
-  mutate(lat = str_remove_all(lat, "'"))
-
-df <- df %>%
-  mutate(lat = str_squish(lat))
-
-#longitude
-df <- df %>%
-  mutate(long = str_replace_all(long, "\xb0", ":"))
-
-df <- df %>%
-  mutate(long = str_remove_all(long, "W"))
-
-df <- df %>%
-  mutate(long = str_remove_all(long, "'"))
-
-df <- df %>%
-  mutate(long = str_squish(long))
-```
-
-``` r
-#extract values to create separate columns for degrees, decimal minutes, and hemisphere
-
-df <- df %>%
-  mutate(lat_deg = str_extract_all(df$lat, "..(?=:)"),
-         lat_dm = str_extract_all(df$lat, "(?<=:)......"),
-         long_deg = str_extract_all(df$long, "..(?=:)"),
-         long_dm = str_extract_all(df$long, "(?<=:)......"))
-
-df$lat_deg <- as.numeric(df$lat_deg)
-df$lat_dm <- as.numeric(df$lat_dm)
-df$long_deg <- as.numeric(df$long_deg)
-df$long_dm <- as.numeric(df$long_dm)
-```
-
-``` r
 coords <- df %>%
+  mutate(lat_deg = as.numeric(str_extract(lat, "\\d+(?=\xb0)")),
+         lat_dm = as.numeric(str_extract(lat, "(?<=\xb0)\\d+.\\d+")),
+         long_deg = as.numeric(str_extract(long, "\\d+(?=\xb0)")),
+         long_dm = as.numeric(str_extract(long, "(?<=\xb0)\\d+.\\d+"))) %>%
+  select(site, plot, asn, aco, lat_deg, lat_dm, long_deg, long_dm)
+```
+
+``` r
+coords <- coords %>%
   select(plot, lat_deg, lat_dm, long_deg, long_dm) %>%
   mutate(lat_dd = lat_deg + lat_dm / 60,
          long_dd = long_deg + long_dm / 60) %>%
   select(plot, lat_dd, long_dd)
 
 # this converts all values in the the `long_dd` variable to negative.
-coords$long_dd <- coords$long_dd*(-1)
+coords$lat_dd <- as.numeric(coords$lat_dd)
+coords$long_dd <- as.numeric(coords$long_dd)*(-1)
 
 # this saves the new coordinates in decimal degrees to the main dataframe, but it leaves a separate smaller `coords` dataframe to work with.
-df$lat_dd <- coords$lat_dd
-df$long_dd <- coords$long_dd
+df$lat_dd <- as.numeric(coords$lat_dd)
+df$long_dd <- as.numeric(coords$long_dd)
+
+write_csv(coords, path = "/cloud/project/data/coords.csv")
 ```
+
+    ## Warning: The `path` argument of `write_csv()` is deprecated as of readr 1.4.0.
+    ## ℹ Please use the `file` argument instead.
+    ## This warning is displayed once every 8 hours.
+    ## Call `lifecycle::last_lifecycle_warnings()` to see where this warning was
+    ## generated.
 
 ``` r
 coords %>%
   ggplot(aes(x = long_dd, y = lat_dd)) +
-  geom_point()
+  geom_point() +
+  scale_y_continuous(breaks = seq(42, 43, by = 0.05))
 ```
 
     ## Warning: Removed 48 rows containing missing values (`geom_point()`).
@@ -366,7 +346,8 @@ mass_towns <- st_read("/cloud/project/data/Community Boundaries (Towns) from Sur
 ``` r
 ggplot(mass_towns) +
   geom_sf() +
-  geom_point(data = coords, (aes(x = long_dd, y = lat_dd)), color = "black", alpha = 0.5)
+  geom_point(data = coords, (aes(x = long_dd, y = lat_dd)), color = "black", alpha = 0.5) +
+  scale_y_continuous(breaks = seq(42, 43, by = 0.05))
 ```
 
     ## Warning: Removed 48 rows containing missing values (`geom_point()`).
@@ -485,37 +466,37 @@ and low CWD, and hardwood sites have lower BA and higher CWD volume.
 #### Plethodon cinereus abundance
 
 ``` r
-# creating new dataframe called pc_abund for P. cinereus abundance, grouped by plot, site, and forest type.
+# creating new dataframe called pc_abund for P. cinereus abundance, grouped by plot, site, forest type, and sex.
 pc_abund <- df %>%
-  group_by(plot, site, ft) %>%
+  group_by(plot, site, ft, sex) %>%
   drop_na(pca) %>%
   filter(pca != 0) %>%
   count(pca, sort = TRUE) %>%
   summarise(n_ind = sum(n*pca))
 ```
 
-    ## `summarise()` has grouped output by 'plot', 'site'. You can override using the
-    ## `.groups` argument.
+    ## `summarise()` has grouped output by 'plot', 'site', 'ft'. You can override
+    ## using the `.groups` argument.
 
 ``` r
 pc_abund
 ```
 
-    ## # A tibble: 29 × 4
-    ## # Groups:   plot, site [29]
-    ##    plot   site  ft    n_ind
-    ##    <chr>  <chr> <chr> <dbl>
-    ##  1 BHMD   BH    MD        8
-    ##  2 BHTS   BH    TS        1
-    ##  3 ER1MD  ER1   MD        6
-    ##  4 ER1TS  ER1   TS        7
-    ##  5 ER2MD  ER2   MD       19
-    ##  6 ER2TS  ER2   TS       22
-    ##  7 MGSFMD MGSF  MD        5
-    ##  8 MGSFTS MGSF  TS        5
-    ##  9 MRMD   MR    MD        1
-    ## 10 MRTS   MR    TS        3
-    ## # ℹ 19 more rows
+    ## # A tibble: 70 × 5
+    ## # Groups:   plot, site, ft [29]
+    ##    plot  site  ft    sex   n_ind
+    ##    <chr> <chr> <chr> <chr> <dbl>
+    ##  1 BHMD  BH    MD    F         2
+    ##  2 BHMD  BH    MD    M         5
+    ##  3 BHMD  BH    MD    <NA>      1
+    ##  4 BHTS  BH    TS    F         1
+    ##  5 ER1MD ER1   MD    <NA>      6
+    ##  6 ER1TS ER1   TS    F         3
+    ##  7 ER1TS ER1   TS    <NA>      4
+    ##  8 ER2MD ER2   MD    F        11
+    ##  9 ER2MD ER2   MD    M         4
+    ## 10 ER2MD ER2   MD    <NA>      4
+    ## # ℹ 60 more rows
 
 ``` r
 pc_abund %>%
@@ -527,8 +508,8 @@ pc_abund %>%
     ## # A tibble: 2 × 3
     ##   ft     mean    sd
     ##   <chr> <dbl> <dbl>
-    ## 1 MD     9.07  5.97
-    ## 2 TS    13.1  15.3
+    ## 1 MD     3.85  3.27
+    ## 2 TS     5.30  5.93
 
 ``` r
 pc_abund %>%

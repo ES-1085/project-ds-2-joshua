@@ -1,0 +1,36 @@
+---
+title: "Red-backed salamander abundance and distribution in north-central Massachusetts"
+author: "Joshua A. Harkness"
+date: "2024-02-13"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+#install.packages(gridExtra)
+library(tidyverse)
+library(broom)
+library(stringr)
+library(sf)
+library(ggspatial)
+library(readxl)
+library(GGally)
+library(gridExtra)
+library(tidymodels)
+```
+```{r}
+df <- read_csv("/cloud/project/data/df.csv")
+```
+
+```{r}
+df <- df %>%
+  mutate(pca_log = as.numeric(log(pca)))
+
+df %>%
+  filter(pca_log != "-Inf") %>%
+ggplot(aes(x = pca_log)) +
+  geom_histogram()
+```
