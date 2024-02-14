@@ -312,8 +312,7 @@ write_csv(coords, path = "/cloud/project/data/coords.csv")
 ``` r
 coords %>%
   ggplot(aes(x = long_dd, y = lat_dd)) +
-  geom_point() +
-  scale_y_continuous(breaks = seq(42, 43, by = 0.05))
+  geom_point() 
 ```
 
     ## Warning: Removed 48 rows containing missing values (`geom_point()`).
@@ -344,10 +343,16 @@ mass_towns <- st_read("/cloud/project/data/Community Boundaries (Towns) from Sur
     ## Projected CRS: NAD83 / Massachusetts Mainland
 
 ``` r
+mass_towns <- st_transform(mass_towns, "+init=epsg:4326")
+```
+
+    ## Warning in CPL_crs_from_input(x): GDAL Message 1: +init=epsg:XXXX syntax is
+    ## deprecated. It might return a CRS with a non-EPSG compliant axis order.
+
+``` r
 ggplot(mass_towns) +
   geom_sf() +
-  geom_point(data = coords, (aes(x = long_dd, y = lat_dd)), color = "black", alpha = 0.5) +
-  scale_y_continuous(breaks = seq(42, 43, by = 0.05))
+  geom_point(data = coords, (aes(x = long_dd, y = lat_dd)), color = "black", alpha = 0.5)
 ```
 
     ## Warning: Removed 48 rows containing missing values (`geom_point()`).
