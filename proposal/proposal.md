@@ -287,18 +287,20 @@ coords <- df %>%
 
 ``` r
 coords <- coords %>%
-  select(plot, lat_deg, lat_dm, long_deg, long_dm) %>%
   mutate(lat_dd = lat_deg + lat_dm / 60,
-         long_dd = long_deg + long_dm / 60) %>%
-  select(plot, lat_dd, long_dd)
+         long_dd = long_deg + long_dm / 60)
 
 # this converts all values in the the `long_dd` variable to negative.
-coords$lat_dd <- as.numeric(coords$lat_dd)
-coords$long_dd <- as.numeric(coords$long_dd)*(-1)
+coords$lat_dd <- round(as.numeric(coords$lat_dd), 4)
+coords$long_dd <- round(as.numeric(coords$long_dd)*(-1), 4)
 
 # this saves the new coordinates in decimal degrees to the main dataframe, but it leaves a separate smaller `coords` dataframe to work with.
+
 df$lat_dd <- as.numeric(coords$lat_dd)
 df$long_dd <- as.numeric(coords$long_dd)
+
+coords <- coords %>%
+  select(site, plot, asn, aco, lat_dd, long_dd)
 
 write_csv(coords, path = "/cloud/project/data/coords.csv")
 ```
@@ -308,24 +310,6 @@ write_csv(coords, path = "/cloud/project/data/coords.csv")
     ## This warning is displayed once every 8 hours.
     ## Call `lifecycle::last_lifecycle_warnings()` to see where this warning was
     ## generated.
-
-``` r
-coords %>%
-  ggplot(aes(x = long_dd, y = lat_dd)) +
-  geom_point() 
-```
-
-    ## Warning: Removed 48 rows containing missing values (`geom_point()`).
-
-![](proposal_files/figure-gfm/plot-dd-coords-1.png)<!-- -->
-
-Based on the coordinates plotted here, data was collected within twenty
-miles of Harvard Forest (HF) in Petersham, MA. The central clusters of
-points appear to be from the HF properties in Petersham; the
-southeastern cluster is from Mount Wachusett, and the northern and
-western clusters on state land in the towns of Northfield, Warwick, and
-Royalston. This provides a useful reference as to the spatial scale of
-this project.
 
 I will also load in shapefiles of Massachusetts town boundaries, along
 with state-owned land, and any applicable layers in the HF GIS.
@@ -342,6 +326,9 @@ mass_towns <- st_read("/cloud/project/data/Community Boundaries (Towns) from Sur
     ## Bounding box:  xmin: 33863.73 ymin: 777606.4 xmax: 330837 ymax: 959743
     ## Projected CRS: NAD83 / Massachusetts Mainland
 
+I had some issues getting the points to plot correctly with the
+shapefile, so I am transforming it to GCS WGS1984 (EPSG: 4326).
+
 ``` r
 mass_towns <- st_transform(mass_towns, "+init=epsg:4326")
 ```
@@ -352,20 +339,51 @@ mass_towns <- st_transform(mass_towns, "+init=epsg:4326")
 ``` r
 ggplot(mass_towns) +
   geom_sf() +
-  geom_point(data = coords, (aes(x = long_dd, y = lat_dd)), color = "black", alpha = 0.5)
+  geom_point(data = coords, (aes(x = long_dd, y = lat_dd)), alpha = 0.5)
 ```
 
     ## Warning: Removed 48 rows containing missing values (`geom_point()`).
 
 ![](proposal_files/figure-gfm/plot-mass_towns-coords-1.png)<!-- -->
+Zoomed-in view:
 
-Not sure why I’m getting this mismatch in coordinates. My points appear
-in the correct location when plotted with X/Y coordinates only, but
-they’re showing up about 8 degrees too far south and a little west when
-plotted with this shapefile of Massachusetts towns. Maybe because the
-points don’t have a coordinate reference system assigned? I haven’t had
-this issue before though. I’ll try loading these points into ArcGIS to
-see if I can figure out the source of the issue.
+``` r
+ggplot(mass_towns) +
+  geom_sf() +
+  geom_point(data = coords, (aes(x = long_dd, y = lat_dd, color = site))) +
+  xlim(-72.5, -71.75) +
+  ylim(42.4, 42.75) +
+  ggspatial::annotation_scale(
+    location = "bl",
+    bar_cols = c("grey60", "white"),
+    text_family = "ArcherPro Book"
+  ) +
+  ggspatial::annotation_north_arrow(
+    location = "tr", which_north = "true",
+    pad_x = unit(0, "in"), pad_y = unit(0.2, "in"),
+    style = ggspatial::north_arrow_fancy_orienteering(
+      fill = c("grey40", "white"),
+      line_col = "grey20",
+      text_family = "ArcherPro Book"))
+```
+
+    ## Warning: Removed 48 rows containing missing values (`geom_point()`).
+
+![](proposal_files/figure-gfm/unnamed-chunk-1-1.png)<!-- -->
+
+Based on the coordinates plotted here, data was collected within twenty
+miles of Harvard Forest (HF) in Petersham, MA. The central clusters of
+points appear to be from the HF properties in Petersham; the
+southeastern cluster is from Mount Wachusett, and the northern and
+western clusters on state land in the towns of Northfield, Warwick, and
+Royalston. This provides a useful reference as to the spatial scale of
+this project.
+
+From this the following site locations can be determined: BH - Beryl
+Hill ER - Erving State Forest MGSF - Mount Grace State Forest MR -
+Millers River NSF - Northfield State Forest PH - Prospect Hill SC - East
+Branch Swift River TS - Tom Swamp (HF) WA - Mount Wachusett State
+Reservation WSF - Warwick State Forest
 
 ### Preliminary hypotheses
 
