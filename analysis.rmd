@@ -22,6 +22,7 @@ library(gridExtra)
 library(tidymodels)
 library(MASS)
 library(simfit)
+library(ggpmisc)
 ```
 
 #### Load data
@@ -221,12 +222,44 @@ t.test(svl ~ ft, data = df_pc)
 No significant difference in mean snout-vent length between mixed deciduous and hemlock forests.
 
 We can also model this with the continuous variable `ts` instead of categorical `ft`.
+```{r}
+lm_wt_ts <- linear_reg(engine = "lm") %>%
+  fit(wt ~ ts, data = df_pc)
+
+lm_wt_ts_tidy <- lm_wt_ft %>%
+  tidy()
+
+lm_wt_ts_tidy
+
+glance(lm_wt_ts)
+```
+Not significant with very low R^2.
 
 ```{r}
+lm_tl_ts <- linear_reg(engine = "lm") %>%
+  fit(tl ~ ts, data = df_pc)
 
+lm_tl_ts_tidy <- lm_tl_ts %>%
+  tidy()
+
+lm_tl_ts_tidy
+
+glance(lm_tl_ts)
 ```
+Significant (P = 0.02), but note very low R^2 (0.0089).
 
+```{r}
+lm_svl_ts <- linear_reg(engine = "lm") %>%
+  fit(svl ~ ts, data = df_pc)
 
+lm_svl_ts_tidy <- lm_svl_ts %>%
+  tidy()
+
+lm_svl_ts_tidy
+
+glance(lm_svl_ts)
+```
+Also significant (P = 0.02), again with very low R^2 (0.0088).
 
 ## Biodiversity
 ```{r}
