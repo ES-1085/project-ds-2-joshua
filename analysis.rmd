@@ -59,6 +59,21 @@ nb_env_effect1 <- glm.nb(n_ind ~ soil.ph * ts * ba * st.ha * canopy.cover + avg.
 summary(nb_env_effect1)
 ```
 #### Are P. cinereus more abundant in hemlock or mixed deciduous forests?
+```{r}
+df_pc %>%
+  ggplot(aes(x = ft, y = n_ind, fill = ft)) +
+  geom_violin() +
+  theme_classic() +
+  scale_x_discrete(labels = c("Mixed deciduous", "Hemlock")) +
+  labs(x = "Forest type",
+       y = "P. cinereus counts") +
+  theme(legend.position = "none")
+```
+Wilcoxon-signed rank test since response variable is not normally distributed.
+```{r}
+wilcox.test(df_pc$n_ind ~ df_pc$ft)
+```
+Mean P. cinereus abundance is significantly higher in hemlock-dominated stands than in mixed-deciduous stands (Wilcoxon rank sum test, W = 1676, P = <0.001).
 
 ```{r}
 df_pc %>%
@@ -72,10 +87,20 @@ Simple linear model is not a good fit, so we'll also try this with a negative bi
 nb1 <- glm.nb(n_ind ~ ts, data = df_pc)
 summary(nb1)
 pred.plot(nb1, xpred = "ts") +
-  scale_y_continuous("Count", 
-                     labels = function(x) format(x, scientific = FALSE)) +
-  scale_x_continuous("Percent hemlock") +
-  theme_bw()
+  labs(x = "Percent hemlock basal area (m2/ha)",
+       y = "P. cinereus count")
+```
+```{r}
+glance(nb1)
+```
+
+
+```{r}
+nb_cwd <- glm(n_ind ~ vcwd.con, data = df_pc, family = "quasipoisson")
+summary(nb_cwd)
+pred.plot(nb_cwd, xpred = "vcwd.con") +
+  labs(x = "CWD volume in contact with ground",
+       y = "P. cinereus count")
 ```
 
 
