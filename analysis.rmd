@@ -265,15 +265,39 @@ Also significant (P = 0.02), again with very low R^2 (0.0088).
 ```{r}
 herps <- read_csv("/cloud/project/data/hf131-06-herps.csv")
 
-sp <- left_join(df, herps)
-```
-```{r}
-herps %>%
-  count(species)
-```
-Add PLCI to species with case_when or if_else
-```{r}
+herps <- herps %>%
+  mutate(herp_species = species)
 
+herps %>%
+  count(herp_species)
 ```
+We also have 323 observations of individual P. cinereus we need to add here as well as check to see if there are any instances of multiple individuals of other herps in one observation.  Add PLCI to species with case_when or if_else.
+
+```{r}
+sp <- full_join(df_pc, herps)
+
+sp <- sp %>%
+  select(ft, site, plot, asn, aco, n_ind, osn, other.sp, herp_species)
+
+sp
+```
+```{r}
+sp %>%
+  filter(str_detect(osn, ","))
+```
+No commas in the unique identifiers assigned to other herp species, so we can assume there are no cases of multiple individuals per observation.
+
+```{r}
+df %>%
+  select(ft, site, pca) %>% 
+  filter(pca != 0) %>%
+  mutate(ind = case_when(pca == 2 ~ ))
+```
+
+I need to duplicate these rows with `pca` > 1 by the conditional value of `pca` so that each row is one individual P. cinereus.
+
+
+
 
 Then use iNEXT for plotting rarefaction/sp estimators
+
