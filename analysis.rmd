@@ -20,18 +20,16 @@ library(readxl)
 library(GGally)
 library(gridExtra)
 library(tidymodels)
+library(MASS)
+library(simfit)
 ```
+
+#### Load data
 ```{r}
 df <- read_csv("/cloud/project/data/df.csv")
 ```
-
-```{r}
-df %>%
-  ggplot(aes(x = aco, y = pca)) +
-  geom_jitter()
-```
-No more than 3 P. cinereus were observed under a singe cover board during any one survey.  `geom_jitter` reveals some overlap -- that there are multiple identical counts (presumably accounting for repeated visits to the same cover board).  This explains why when grouped by `aco` (below) we find some cover boards have many more than 3 salamanders observed.
-
+## P. cinereus abundance
+#### Calculate abundance
 ```{r}
 pc_abund <- df %>%
   group_by(ft, site, plot, asn, aco) %>%
@@ -41,251 +39,19 @@ pc_abund <- df %>%
 
 pc_abund
 ```
-```{r}
-sum(pc_abund$n_ind)
-```
-323 total salamanders observed.
 
-#### Abundance diff between forest types
-```{r}
-pc_abund_sum <- pc_abund %>%
-  group_by(ft) %>%
-  summarise(mean = mean(n_ind),
-            sd = sd(n_ind),
-            se = sd/sqrt(sum(n_ind)))
-
-pc_abund_sum
-```
-```{r}
-pc_abund_sum %>%
-  ggplot(aes(x = ft, y = mean, fill = ft)) +
-  geom_col(color = "black") +
-  geom_errorbar(aes(ymin = mean - se, ymax = mean + se, width = 0.1)) +
-  labs(x = "Forest Type", y = "Count per cover board")
-```
-```{r}
-ggplot(pc_abund, aes(x = ft, y = n_ind, fill = ft)) +
-  geom_violin()
-```
-Not normally distributed, highly right skewed, so we should use a non-parametric test -- Wilcoxon signed rank/Mann-Whitney U-test are applicable here.
-
-```{r}
-wilcox.test(n_ind ~ ft, data = pc_abund)
-```
-Mean abundance of P. cinereus is not significantly different (P > 0.05) between hemlock and mixed deciduous forest types.
-
-Compare with lm
-
-```{r}
-lm1 <- linear_reg(engine = "lm") %>%
-  fit(n_ind ~ ft, data = pc_abund) %>%
-  tidy()
-
-lm1
-```
-
-
-```{r}
-pc_abund %>%
-  ggplot(aes(x = ft, y = n_ind)) +
-  geom_col()
-```
-Bar plot of total counts by forest type.
-
-#### Log transform
-df %>%
-  group_by(site, plot, asn, aco) %>%
-  mutate(pca_no_zero = case_when(pca == 0 ~ 0.5, pca != 0 ~ pca),
-         pca_log = log(pca_no_zero))
-         
-```{r}
-pc_abund <- pc_abund %>%
-  mutate(n_ind1 = case_when(n_ind == 0 ~ 0.5, n_ind != 0 ~ n_ind),
-         n_log = log10(n_ind1))
-```
-
-```{r}
-hist1 <- pc_abund %>%
-  ggplot(aes(x = n_ind)) +
-  geom_histogram(fill = "red4", color = "black")
-
-hist2 <- pc_abund %>%
-  ggplot(aes(x = n_log)) +
-  geom_histogram(fill = "darkseagreen", color = "black")
-
-grid.arrange(hist1, hist2)
-```
-
-## Join dataframes
+#### Join dataframes
 ```{r}
 df_pc <- left_join(df, pc_abund)
 ```
+
+### Modeling
+Using negative binomial framework here as it provided the lowest AICs in model testing, given highly skewed count data with variance not equal to mean.  Quasi-Poisson may also be applicable here.
+
+#### Environmental Model with no interaction effects
 ```{r}
-df_pc <- df_pc %>%
-  mutate(avg.dc1 = case_when(avg.dc == 0 ~ 0.5, avg.dc != 0 ~ avg.dc),
-         avg.dc_log = log10(avg.dc1))
-```
-
-
-## Modeling
-```{r}
-hist3 <- df_pc %>%
-  ggplot(aes(x = avg.dc, y = n_ind)) +
-  geom_point() +
-  geom_smooth(method = "lm")
-
-hist4 <- df_pc %>%
-  ggplot(aes(x = avg.dc_log, y = n_log)) +
-  geom_point() +
-  geom_smooth(method = "lm")
-
-grid.arrange(hist3, hist4)
-```
-
-```{r}
-lm2 <- linear_reg(engine = "lm") %>%
-  fit(n_ind ~ avg.dc, data = df_pc)
-
-lm2_tidy <- lm2 %>%
-  tidy()
-
-lm2_tidy
-```
-
-```{r}
-glance(lm2)
-```
-```{r}
-lm3 <- linear_reg(engine = "lm") %>%
-  fit(n_log ~ avg.dc_log, data = df_pc)
-
-lm3_tidy <- lm3 %>%
-  tidy()
-
-lm3_tidy
-```
-
-```{r}
-glance(lm3)
-```
-#### GLM
-```{r}
-glm1 = glm(n_ind ~ avg.dc, data = df_pc)
-summary(glm1)
-```
-
-#### Poisson
-```{r}
-pois1 = glm(n_ind ~ avg.dc, data = df_pc, family = "poisson")
-summary(glm1)
-```
-
-#### Quasi-Poisson
-```{r}
-qpois1 = glm(n_ind ~ avg.dc, data = df_pc, family = "quasipoisson")
-summary(glm1)
-```
-Maybe a good fit?  Resolves the overdispersion issue.
-
-#### Negative binomial
-```{r}
-#install.packages("MASS")
-#install.packages("simfit")
-library(MASS)
-library(simfit)
-```
-
-```{r}
-nb1 <- glm.nb(n_ind ~ avg.dc, data = df_pc)
-summary(nb1)
-```
-Best fit yet, other than possibly quasi-poisson.
-
-```{r}
-pred.plot(nb1, xpred = "avg.dc") +
-  scale_y_continuous("Count", 
-                     labels = function(x) format(x, scientific = FALSE)) +
-  scale_x_continuous("Average decay class") +
-  theme_bw(14)
-```
-
-
-#### Quadratic
-
-First simple linear model
-```{r}
-lm3 <- linear_reg(engine = "lm") %>%
-  fit(n_ind ~ avg.dc, data = df_pc)
-
-lm3_tidy <- lm3 %>%
-  tidy()
-
-lm3_tidy
-```
-
-```{r}
-glance(lm3)
-```
-
-R squared isn't good (0.044), but better than I was expecting -- explains less than 5% of data.  AIC is also quite high.
-
-```{r}
-#Square average decay class to fit quadratic model
-df_pc <- df_pc %>%
-  mutate(avg.dc2 = avg.dc^2)
-```
-
-```{r}
-lm3_quad <- linear_reg(engine = "lm") %>%
-  fit(n_ind ~ avg.dc + avg.dc2, data = df_pc)
-
-lm3_quad_tidy <- lm3_quad %>%
-  tidy()
-
-lm3_quad_tidy
-```
-```{r}
-glance(lm3_quad)
-```
-AIC is hardly any lower.  Still not a good fit.
-
-
-Plot quadratic model
-```{r}
-dc_values <- seq(0, 5, 0.1)
-
-predictedcounts <- predict(lm3_quad, list(avg.dc = dc_values, avg.dc2 = dc_values^2))
-```
-
-```{r}
-plot(df_pc$avg.dc, df_pc$n_ind, pch=16, xlab = "Decay class", ylab = "Counts", cex.lab = 1.3, col = "blue")
-lines(dc_values, predictedcounts, col = "darkgreen", lwd = 3)
-```
-A little better, but still not a good fit (explains ~5% of data).  Problem seems to be heteroscedasticity.
-
-I will try this for BA as well.
-
-```{r}
-#Square average decay class to fit quadratic model
-df_pc <- df_pc %>%
-  mutate(ba2 = ba^2)
-```
-
-```{r}
-lm4_quad <- lm(n_ind ~ ba + ba2, data = df_pc)
-summary(lm4_quad)
-```
-
-Plot quadratic model
-```{r}
-dc_values <- seq(0, 5, 0.1)
-
-predictedcounts <- predict(lm3_quad, list(avg.dc = dc_values, avg.dc2 = dc_values^2))
-```
-
-```{r}
-plot(df_pc$avg.dc, df_pc$n_ind, pch=16, xlab = "Decay class", ylab = "Counts", cex.lab = 1.3, col = "blue")
-lines(dc_values, predictedcounts, col = "darkgreen", lwd = 3)
+nb_env <- glm.nb(n_ind ~ ft + ba + st.ha + ts + canopy.cover + avg.dc + vcwd.con + cwd.con + tot.snags + avg.snag.dbh + soil.ph + soilt + airt + rh, data = df_pc)
+summary(nb_env)
 ```
 
 

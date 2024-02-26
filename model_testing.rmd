@@ -309,46 +309,9 @@ summary(nb2)
 P. cinereus is significantly correlated with forest type (higher in hemlock stands), but is not significantly correlated with percent hemlock cover, suggesting that there is some effect of how the authors classified mixed deciduous vs hemlock forests.  Abundance is not significantly correlated with basal area, but is significantly correlated to stem density.
 
 
-Dead wood
+All environmental variables
 ```{r}
-nb3 <- glm.nb(n_ind ~ avg.dc + vcwd.con + cwd.con + tot.snags + avg.snag.dbh, data = df_pc)
-summary(nb3)
+nb_env <- glm.nb(n_ind ~ ft + ba + st.ha + ts + canopy.cover + avg.dc + vcwd.con + cwd.con + tot.snags + avg.snag.dbh + soil.ph + soilt + airt + rh, data = df_pc)
+summary(nb_env)
 ```
-
-## P. cinereus Morphometrics
-```{r}
-df_pc %>%
-  ggplot(aes(x = ft, y = wt, fill = ft)) +
-  geom_boxplot()
-```
-```{r}
-t.test(df_pc$wt ~ df_pc$ft)
-```
-Weight is not significantly different between forest types.
-
-```{r}
-df_pc %>%
-  ggplot(aes(x = ft, y = svl, fill = ft)) +
-  geom_boxplot()
-```
-```{r}
-t.test(df_pc$svl ~ df_pc$ft)
-```
-Snout-vent length also not significantly different between forest types.
-
-## Biodiversity
-```{r}
-herps <- read_csv("/cloud/project/data/hf131-06-herps.csv")
-
-sp <- left_join(df, herps)
-```
-```{r}
-herps %>%
-  count(species)
-```
-Add PLCI to species with case_when or if_else
-```{r}
-
-```
-
-Then use iNEXT for plotting rarefaction/sp estimators
+Consider interaction effects here; some of these variables are definitely not independent.
