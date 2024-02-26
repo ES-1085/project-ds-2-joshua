@@ -116,7 +116,9 @@ wt_plot <- df_pc %>%
   labs(x = "Weight (cg)",
        y = "",
        fill = "Sex") +
-  theme(legend.position = c(0.96, 0.85))
+  theme(legend.position = c(0.96, 0.85)) +
+  theme(legend.title = element_blank())
+
 tl_plot <- df_pc %>%
   drop_na(sex) %>%
   ggplot(aes(x = tl, fill = sex)) +
@@ -124,13 +126,14 @@ tl_plot <- df_pc %>%
   labs(x = "Total length (mm)",
        y = "Density") +
   theme(legend.position = "none")
+
 svl_plot <- df_pc %>%
   drop_na(sex) %>%
   ggplot(aes(x = svl, fill = sex)) +
   geom_density(alpha = 0.5) +
   labs(x = "Snout-vent length (mm)",
        y = "") +
-  theme(legend.position = "none")
+  theme(legend.position = "none") 
 
 grid.arrange(wt_plot, tl_plot, svl_plot)
 
@@ -305,6 +308,8 @@ pc_obs
 ```{r}
 sp <- full_join(pc_obs, herps)
 
+sp <- sp %>%
+  dplyr::select(ft, herp_species)
 sp
 ```
 
@@ -320,15 +325,23 @@ sp %>%
   count(herp_species) %>%
   arrange(herp_species)
 ```
-Looks like all amphibian species were detected more frequently in hemlock stands than mixed deciduous; only the two snake species were more frequently detected in mixed deciduous stands.
+Looks like all amphibian species were detected more frequently in hemlock stands than mixed deciduous; only the two snake species were more frequently detected in mixed deciduous stands.  Since snakes are a separate taxonomic group and are only found in one habitat, they are adding noise to the analysis.  We will remove them for analyzing biodiversity.
 
 ```{r}
-md <- sp %>%
+amph <- sp %>%
+  filter(herp_species %in% c("AMMA", "PLCI", "NOVI", "EUBI", "RASY"))
+
+amph
+```
+
+
+```{r}
+md <- amph %>%
   filter(ft == "MD")
 
 md
 
-ts <- sp %>%
+ts <- amph %>%
   filter(ft == "TS")
 
 ts
@@ -337,9 +350,11 @@ ts
 ```{r create-richness-list}
 md_matrix <- matrix(table(md))
 md_abund <- as.abucount(md_matrix)
+glimpse(md_abund)
 
 ts_matrix <- matrix(table(ts))
 ts_abund <- as.abucount(ts_matrix)
+glimpse(ts_abund)
 
 richness_list <- list(md_abund, ts_abund)
 ```
@@ -352,6 +367,8 @@ richness
 ggiNEXT(richness, type=1, facet.var = "None", color.var = "Assemblage") +
   scale_color_discrete(name = "None", labels = c("Mixed deciduous", "Hemlock")) +
   scale_shape_discrete(name = "None", labels = c("Mixed deciduous", "Hemlock")) +
-  scale_fill_discrete(name = "None", labels = c("Mixed deciduous", "Hemlock"))
+  scale_fill_discrete(name = "None", labels = c("Mixed deciduous", "Hemlock")) +
+  labs(caption = "Amphibian species only")
 ```
 
+Not particularly meaningful due to small sample size and sampling design targeted to detect P. cinereus, but it does suggest that amphibian biodiversity may be higher in hemlock stands.
