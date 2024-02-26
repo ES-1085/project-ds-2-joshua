@@ -96,7 +96,7 @@ glance(nb1)
 
 
 ```{r}
-nb_cwd <- glm(n_ind ~ vcwd.con, data = df_pc, family = "quasipoisson")
+nb_cwd <- glm.nb(n_ind ~ vcwd.con, data = df_pc)
 summary(nb_cwd)
 pred.plot(nb_cwd, xpred = "vcwd.con") +
   labs(x = "CWD volume in contact with ground",
@@ -105,25 +105,128 @@ pred.plot(nb_cwd, xpred = "vcwd.con") +
 
 
 ## P. cinereus Morphometrics
+
 ```{r}
-df_pc %>%
-  ggplot(aes(x = ft, y = wt, fill = ft)) +
-  geom_boxplot()
+wt_plot <- df_pc %>%
+  drop_na(sex) %>%
+  ggplot(aes(x = wt, fill = sex)) +
+  geom_density(alpha = 0.5) +
+  labs(x = "Weight (cg)",
+       y = "",
+       fill = "Sex") +
+  theme(legend.position = c(0.96, 0.85))
+tl_plot <- df_pc %>%
+  drop_na(sex) %>%
+  ggplot(aes(x = tl, fill = sex)) +
+  geom_density(alpha = 0.5) +
+  labs(x = "Total length (mm)",
+       y = "Density") +
+  theme(legend.position = "none")
+svl_plot <- df_pc %>%
+  drop_na(sex) %>%
+  ggplot(aes(x = svl, fill = sex)) +
+  geom_density(alpha = 0.5) +
+  labs(x = "Snout-vent length (mm)",
+       y = "") +
+  theme(legend.position = "none")
+
+grid.arrange(wt_plot, tl_plot, svl_plot)
+
+#  ggpairs(aes(color = sex), columns = c("wt", "tl", "svl"))
 ```
-```{r}
-t.test(df_pc$wt ~ df_pc$ft)
-```
-Weight is not significantly different between forest types.
+
+Density distributions for Plethodon cinereus weight (in centigrams), total and snout-vent length (in millimeters).  Females appear to be somewhat heavier and longer than males.  Observations with missing values removed.  Skew in total length but not snout-vent length may be due to salamanders with missing/regenerating tails.
 
 ```{r}
 df_pc %>%
-  ggplot(aes(x = ft, y = svl, fill = ft)) +
-  geom_boxplot()
+  drop_na(sex) %>%
+  ggplot(aes(x = sex, y = wt, fill = sex)) +
+  geom_boxplot() +
+  geom_jitter(width = 0.025, alpha = 0.25) +
+  labs(x = "Sex",
+       y = "Weight (cg)") +
+  theme_bw() +
+  theme(legend.position = "none")
+```
+
+Normally distributed, so we can use a T-test or simple linear model.
+
+T-test first:
+```{r}
+t.test(wt ~ sex, data = df_pc)
+```
+
+Now simple linear model.
+```{r}
+lm_wt_sex <- linear_reg(engine = "lm") %>%
+  fit(wt ~ sex, data = df_pc)
+
+lm_wt_sex_tidy <- lm_wt_sex %>%
+  tidy()
+
+lm_wt_sex_tidy
 ```
 ```{r}
-t.test(df_pc$svl ~ df_pc$ft)
+glance(lm_wt_sex)
 ```
-Snout-vent length also not significantly different between forest types.
+
+Not sure which one of these is the better fit here.  Data is normally distributed and meets the assumptions of the t-test.  Also meets the assumptions of the linear model, except that sex is a discrete category and not a continuous vector, so it gives us a low R^2 but it does seem to be an applicable method here; interesting how similar but slightly different the P values are.
+
+I will also run T-tests for total length and snout-vent length as a function of sex.
+```{r}
+t.test(tl ~ sex, data = df_pc)
+```
+```{r}
+t.test(svl ~ sex, data = pc_morpho)
+```
+
+Female P. cinereus are significantly heavier than males; total length and snout-vent length were also significantly longer in females than males.
+
+#### By forest type
+```{r}
+box1 <- df_pc %>%
+  ggplot(aes(x = ft, y = wt, fill = ft)) +
+  geom_boxplot() +
+  labs(x = "Forest type",
+       y = "Weight (cg)")
+
+box2 <- df_pc %>%
+  ggplot(aes(x = ft, y = tl, fill = ft)) +
+  geom_boxplot() +
+  labs(x = "Forest type",
+       y = "Total length (mm)")
+
+box3 <- df_pc %>%
+  ggplot(aes(x = ft, y = svl, fill = ft)) +
+  geom_boxplot() +
+  labs(x = "Forest type",
+       y = "Snout-vent length (mm)")
+
+grid.arrange(box1, box2, box3, ncol = 2)
+```
+
+```{r}
+t.test(wt ~ ft, data = df_pc)
+```
+No significant difference in mean weight between mixed deciduous and hemlock-dominated stands.
+
+```{r}
+t.test(tl ~ ft, data = df_pc)
+```
+No significant difference in mean total length between mixed deciduous and hemlock stands.
+
+```{r}
+t.test(svl ~ ft, data = df_pc)
+```
+No significant difference in mean snout-vent length between mixed deciduous and hemlock forests.
+
+We can also model this with the continuous variable `ts` instead of categorical `ft`.
+
+```{r}
+
+```
+
+
 
 ## Biodiversity
 ```{r}
