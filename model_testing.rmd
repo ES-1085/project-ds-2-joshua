@@ -84,63 +84,75 @@ lm1 <- linear_reg(engine = "lm") %>%
 lm1
 ```
 
-
-```{r}
-pc_abund %>%
-  ggplot(aes(x = ft, y = n_ind)) +
-  geom_col()
-```
-Bar plot of total counts by forest type.
-
-#### Log transform
-df %>%
-  group_by(site, plot, asn, aco) %>%
-  mutate(pca_no_zero = case_when(pca == 0 ~ 0.5, pca != 0 ~ pca),
-         pca_log = log(pca_no_zero))
-         
-```{r}
-pc_abund <- pc_abund %>%
-  mutate(n_ind1 = case_when(n_ind == 0 ~ 0.5, n_ind != 0 ~ n_ind),
-         n_log = log10(n_ind1))
-```
-
-```{r}
-hist1 <- pc_abund %>%
-  ggplot(aes(x = n_ind)) +
-  geom_histogram(fill = "red4", color = "black")
-
-hist2 <- pc_abund %>%
-  ggplot(aes(x = n_log)) +
-  geom_histogram(fill = "darkseagreen", color = "black")
-
-grid.arrange(hist1, hist2)
-```
-
 ## Join dataframes
 ```{r}
 df_pc <- left_join(df, pc_abund)
 ```
+## Plot useful variables
 ```{r}
-df_pc <- df_pc %>%
-  mutate(avg.dc1 = case_when(avg.dc == 0 ~ 0.5, avg.dc != 0 ~ avg.dc),
-         avg.dc_log = log10(avg.dc1))
+p1 <- ggplot(df_pc, aes(x = ba, y = n_ind)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  labs(x = "Basal area (m2/ha)")
+p2 <- ggplot(df_pc, aes(x = st.ha, y = n_ind)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  labs(x = "Stems/ha")
+p3 <- ggplot(df_pc, aes(x = ts, y = n_ind)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  labs(x = "Percent hemlock")
+p4 <- ggplot(df_pc, aes(x = canopy.cover, y = n_ind)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  labs(x = "Percent canopy cover")
+p5 <- ggplot(df_pc, aes(x = cwd.con, y = n_ind)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  labs(x = "Number CWD pieces contact")
+p6 <- ggplot(df_pc, aes(x = vcwd.con, y = n_ind)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  labs(x = "Volume CWD contact")
+p7 <- ggplot(df_pc, aes(x = avg.dc, y = n_ind)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  labs(x = "Average decay class")
+p8 <- ggplot(df_pc, aes(x = tot.snags, y = n_ind)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  labs(x = "Total snags")
+p9 <- ggplot(df_pc, aes(x = avg.snag.dbh, y = n_ind)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  labs(x = "Average snag DBH")
+
+grid.arrange(p1, p2, p3, p4, p5, p6, p7, p8, p9)
+```
+
+```{r}
+p10 <- ggplot(df_pc, aes(x = soil.ph, y = n_ind)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  labs(x = "Soil pH")
+p11 <- ggplot(df_pc, aes(x = airt, y = n_ind)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  labs(x = "Air temp")
+p12 <- ggplot(df_pc, aes(x = rh, y = n_ind)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  labs(x = "Relative humidity")
+p13 <- ggplot(df_pc, aes(x = soilt, y = n_ind)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  labs(x = "Soil temp")
+
+grid.arrange(p10, p11, p12, p13)
 ```
 
 
 ## Modeling
-```{r}
-hist3 <- df_pc %>%
-  ggplot(aes(x = avg.dc, y = n_ind)) +
-  geom_point() +
-  geom_smooth(method = "lm")
-
-hist4 <- df_pc %>%
-  ggplot(aes(x = avg.dc_log, y = n_log)) +
-  geom_point() +
-  geom_smooth(method = "lm")
-
-grid.arrange(hist3, hist4)
-```
 
 ```{r}
 lm2 <- linear_reg(engine = "lm") %>%
@@ -288,6 +300,20 @@ plot(df_pc$avg.dc, df_pc$n_ind, pch=16, xlab = "Decay class", ylab = "Counts", c
 lines(dc_values, predictedcounts, col = "darkgreen", lwd = 3)
 ```
 
+#### Multiple neg bionomials
+Forest structure
+```{r}
+nb2 <- glm.nb(n_ind ~ ft + ba + st.ha + ts + canopy.cover, data = df_pc)
+summary(nb2)
+```
+P. cinereus is significantly correlated with forest type (higher in hemlock stands), but is not significantly correlated with percent hemlock cover, suggesting that there is some effect of how the authors classified mixed deciduous vs hemlock forests.  Abundance is not significantly correlated with basal area, but is significantly correlated to stem density.
+
+
+Dead wood
+```{r}
+nb3 <- glm.nb(n_ind ~ avg.dc + vcwd.con + cwd.con + tot.snags + avg.snag.dbh, data = df_pc)
+summary(nb3)
+```
 
 ## P. cinereus Morphometrics
 ```{r}
