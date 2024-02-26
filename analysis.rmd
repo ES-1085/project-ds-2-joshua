@@ -2,7 +2,7 @@
 title: "Red-backed salamander abundance and distribution in north-central Massachusetts"
 author: "Joshua A. Harkness"
 date: "2024-02-13"
-output: html_document
+output: github_document
 ---
 
 ```{r setup, include=FALSE}
@@ -23,6 +23,7 @@ library(tidymodels)
 library(MASS)
 library(simfit)
 library(ggpmisc)
+library(iNEXT)
 ```
 
 #### Load data
@@ -178,9 +179,8 @@ I will also run T-tests for total length and snout-vent length as a function of 
 t.test(tl ~ sex, data = df_pc)
 ```
 ```{r}
-t.test(svl ~ sex, data = pc_morpho)
+t.test(svl ~ sex, data = df_pc)
 ```
-
 Female P. cinereus are significantly heavier than males; total length and snout-vent length were also significantly longer in females than males.
 
 #### By forest type
@@ -226,7 +226,7 @@ We can also model this with the continuous variable `ts` instead of categorical 
 lm_wt_ts <- linear_reg(engine = "lm") %>%
   fit(wt ~ ts, data = df_pc)
 
-lm_wt_ts_tidy <- lm_wt_ft %>%
+lm_wt_ts_tidy <- lm_wt_ts %>%
   tidy()
 
 lm_wt_ts_tidy
@@ -294,8 +294,7 @@ I need to duplicate these rows with `pca` > 1 by the conditional value of `pca` 
 
 ```{r}
 pc_obs <- df %>%
-  uncount(pca) %>%
-  select(ft, site, plot)
+  uncount(pca)
 
 pc_obs$herp_species = "PLCI"
 
@@ -304,8 +303,7 @@ pc_obs
 323 rows all labeled by species (PLCI = Plethodon cinereus).
 
 ```{r}
-sp <- full_join(pc_obs, herps) %>%
-  select(ft, site, herp_species)
+sp <- full_join(pc_obs, herps)
 
 sp
 ```
@@ -324,6 +322,36 @@ sp %>%
 ```
 Looks like all amphibian species were detected more frequently in hemlock stands than mixed deciduous; only the two snake species were more frequently detected in mixed deciduous stands.
 
+```{r}
+md <- sp %>%
+  filter(ft == "MD")
 
-Then use iNEXT for plotting rarefaction/sp estimators
+md
+
+ts <- sp %>%
+  filter(ft == "TS")
+
+ts
+```
+
+```{r create-richness-list}
+md_matrix <- matrix(table(md))
+md_abund <- as.abucount(md_matrix)
+
+ts_matrix <- matrix(table(ts))
+ts_abund <- as.abucount(ts_matrix)
+
+richness_list <- list(md_abund, ts_abund)
+```
+
+```{r}
+richness <- iNEXT(richness_list, q = 0, datatype="abundance")
+richness
+```
+```{r}
+ggiNEXT(richness, type=1, facet.var = "None", color.var = "Assemblage") +
+  scale_color_discrete(name = "None", labels = c("Mixed deciduous", "Hemlock")) +
+  scale_shape_discrete(name = "None", labels = c("Mixed deciduous", "Hemlock")) +
+  scale_fill_discrete(name = "None", labels = c("Mixed deciduous", "Hemlock"))
+```
 
