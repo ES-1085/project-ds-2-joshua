@@ -50,8 +50,32 @@ Using negative binomial framework here as it provided the lowest AICs in model t
 
 #### Environmental Model with no interaction effects
 ```{r}
-nb_env <- glm.nb(n_ind ~ ft + ba + st.ha + ts + canopy.cover + avg.dc + vcwd.con + cwd.con + tot.snags + avg.snag.dbh + soil.ph + soilt + airt + rh, data = df_pc)
+nb_env <- glm.nb(n_ind ~ ts + ba + st.ha + canopy.cover + avg.dc + vcwd.con + cwd.con + tot.snags + avg.snag.dbh + soil.ph + soilt + airt + rh, data = df_pc)
 summary(nb_env)
+```
+#### Environmental model with forest type effect
+```{r}
+nb_env_effect1 <- glm.nb(n_ind ~ soil.ph * ts * ba * st.ha * canopy.cover + avg.dc + vcwd.con * cwd.con + tot.snags + avg.snag.dbh + soilt * airt * rh, data = df_pc)
+summary(nb_env_effect1)
+```
+#### Are P. cinereus more abundant in hemlock or mixed deciduous forests?
+
+```{r}
+df_pc %>%
+  ggplot(aes(x = ts, y = n_ind)) +
+  geom_jitter(alpha = 0.25) +
+  geom_smooth(method = "lm")
+```
+Simple linear model is not a good fit, so we'll also try this with a negative binomial regression.
+
+```{r}
+nb1 <- glm.nb(n_ind ~ ts, data = df_pc)
+summary(nb1)
+pred.plot(nb1, xpred = "ts") +
+  scale_y_continuous("Count", 
+                     labels = function(x) format(x, scientific = FALSE)) +
+  scale_x_continuous("Percent hemlock") +
+  theme_bw()
 ```
 
 
