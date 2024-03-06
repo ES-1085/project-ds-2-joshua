@@ -80,12 +80,13 @@ Using negative binomial framework here as it provided the lowest AICs in model t
 
 #### Environmental Model with no interaction effects (negative binomial)
 ```{r}
-nb_env <- glm.nb(n_ind ~ ts + ba + st.ha + canopy.cover + avg.dc + vcwd.con + cwd.con + tot.snags + avg.snag.dbh + soil.ph + soilt + airt + rh, data = df_pc)
+nb_env <- glm.nb(n_ind ~ ft + ts + ba + st.ha + canopy.cover + cwd.con + vcwd.con + avg.dc + soil.ph + airt + rh + soilt, data = df_pc)
 summary(nb_env)
 ```
-#### Environmental model with forest type effect (negative binomial)
+#### Environmental model with forest type interaction (negative binomial)
+
 ```{r}
-nb_env_effect1 <- glm.nb(n_ind ~ soil.ph * ts * ba * st.ha * canopy.cover + avg.dc + vcwd.con * cwd.con + tot.snags + avg.snag.dbh + soilt * airt * rh, data = df_pc)
+nb_env_effect1 <- glm.nb(n_ind ~ ft * ts * ba * vcwd.con * cwd.con * st.ha + canopy.cover + cwd.con + vcwd.con + avg.dc + soil.ph + airt + rh + soilt, data = df_pc)
 summary(nb_env_effect1)
 ```
 
@@ -105,7 +106,25 @@ library(pscl)
 nb_hurdle1 <- hurdle(n_ind ~ ft + ts + ba + st.ha + canopy.cover + cwd.con + vcwd.con + avg.dc + soil.ph + airt + rh + soilt, data = df_pc, dist = "negbin")
 summary(nb_hurdle1)
 ```
+#### Hurdle NB with forest type interaction
+```{r}
+nb_hurdle2 <- hurdle(n_ind ~ ft * ts * ba + st.ha + canopy.cover + cwd.con * vcwd.con + avg.dc + soil.ph + airt * soilt + rh, data = df_pc, dist = "negbin")
+summary(nb_hurdle2)
+```
 
+#### Compare AIC
+```{r}
+library(AICcmodavg)
+models <- list(nb_env, nb_env_effect1)
+mod.names <- c('Environmental model NB', 'Environmental model with interaction NB')
+aictab(cand.set = models, modnames = mod.names)
+```
+
+```{r}
+models <- list(nb_hurdle1, nb_hurdle2)
+mod.names <- c('Environmental model Hurdle NB', 'Env model w/ forest type')
+aictab(cand.set = models, modnames = mod.names)
+```
 
 #### Are P. cinereus more abundant in hemlock or mixed deciduous forests?
 ```{r}
