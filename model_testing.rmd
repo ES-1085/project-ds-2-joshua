@@ -111,7 +111,7 @@ p5 <- ggplot(df_pc, aes(x = cwd.con, y = n_ind)) +
   geom_smooth(method = "lm") +
   labs(x = "Number CWD pieces contact")
 p6 <- ggplot(df_pc, aes(x = vcwd.con, y = n_ind)) +
-  geom_point() +
+  geom_point(alpha = 0.25) +
   geom_smooth(method = "lm") +
   labs(x = "Volume CWD contact")
 p7 <- ggplot(df_pc, aes(x = avg.dc, y = n_ind)) +
@@ -128,6 +128,10 @@ p9 <- ggplot(df_pc, aes(x = avg.snag.dbh, y = n_ind)) +
   labs(x = "Average snag DBH")
 
 grid.arrange(p1, p2, p3, p4, p5, p6, p7, p8, p9)
+```
+```{r}
+ggplot(df_pc, aes(x = vcwd.con, y = n_ind)) +
+  geom_point(alpha = 0.25)
 ```
 
 ```{r}

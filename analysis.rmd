@@ -30,6 +30,10 @@ library(iNEXT)
 ```{r}
 df <- read_csv("/cloud/project/data/df.csv")
 ```
+
+## Data Tidying
+Redoing some initial analysis here by using `uncount` function to duplicate rows for which there are multiple salamanders observed; currently each observation is a count associated with a cover board, but I want each observation to be an individual salamander.
+
 ## P. cinereus abundance
 #### Calculate abundance
 ```{r}
@@ -39,27 +43,70 @@ pc_abund <- df %>%
   summarise(n_ind = n*pca) %>%
   arrange(desc(n_ind))
 
+
 pc_abund
 ```
+
+```{r}
+pc_abund %>%
+  filter(plot == "SC1TS") %>%
+  ggplot(aes(x = aco, y = n_ind)) +
+  geom_col()
+```
+Looks good so far.
+
 
 #### Join dataframes
 ```{r}
 df_pc <- left_join(df, pc_abund)
+
+df_pc$aco = as.character(df_pc$aco)
+df_pc$asn = as.character(df_pc$asn)
+
+#select useful columns
+df_pc <- df_pc %>%
+  select(plot, site, ft, asn, aco, ba, st.ha, ts, canopy.cover, cwd.no, cwd.con, vcwd, vcwd.con, avg.dc, tot.snags, avg.snag.dbh, soil.ph, date, airt, rh, soilt, n_ind, pcn, pc.no, p, svl, tl, wt, sex)
 ```
+
+It is worth noting that because each row in the `aco` dataframe represents a sampling event at a specific cover board rather than an individual P. cinereus, there are multiple unique identifiers lumped into the `pcn` column but these are individual values in the `pc.no` column from the `pc` dataframe (which does treat every row as an individual P. cinereus).  These rows do not line up as a result, but they are matched to the appropriate 
+```{r}
+#df_pc %>%
+#  mutate(presence = case_when(pca >= 1 ~ 1, pca == 0 ~ pca))
+```
+Need to change `n_ind` -- it looks like it's not in line with other rows in the dataset.
 
 ### Modeling
 Using negative binomial framework here as it provided the lowest AICs in model testing, given highly skewed count data with variance not equal to mean.  Quasi-Poisson may also be applicable here.
 
-#### Environmental Model with no interaction effects
+#### Environmental Model with no interaction effects (negative binomial)
 ```{r}
 nb_env <- glm.nb(n_ind ~ ts + ba + st.ha + canopy.cover + avg.dc + vcwd.con + cwd.con + tot.snags + avg.snag.dbh + soil.ph + soilt + airt + rh, data = df_pc)
 summary(nb_env)
 ```
-#### Environmental model with forest type effect
+#### Environmental model with forest type effect (negative binomial)
 ```{r}
 nb_env_effect1 <- glm.nb(n_ind ~ soil.ph * ts * ba * st.ha * canopy.cover + avg.dc + vcwd.con * cwd.con + tot.snags + avg.snag.dbh + soilt * airt * rh, data = df_pc)
 summary(nb_env_effect1)
 ```
+
+
+
+#### Step-wise AIC comparisons
+```{r}
+fit = lm(n_ind ~ ts + ba + avg.dc + vcwd.con + soil.ph + rh, data = df_pc)
+step = stepAIC(fit, direction = "both")
+step$anova 
+step$coefficients
+```
+```{r}
+#install.packages("pscl")
+library(pscl)
+
+nb_hurdle1 <- hurdle(n_ind ~ ft + ts + ba + st.ha + canopy.cover + cwd.con + vcwd.con + avg.dc + soil.ph + airt + rh + soilt, data = df_pc, dist = "negbin")
+summary(nb_hurdle1)
+```
+
+
 #### Are P. cinereus more abundant in hemlock or mixed deciduous forests?
 ```{r}
 df_pc %>%

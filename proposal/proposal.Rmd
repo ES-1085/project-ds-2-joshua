@@ -51,9 +51,7 @@ glimpse(herps)
 ```{r join-data-files}
 # joining all except herps for now
 plots_aco <- left_join(plots, aco)
-plots_aco_cwd <- left_join(plots_aco, cwd)
-plots_aco_cwd_trees <- left_join(plots_aco_cwd, trees)
-df <- left_join(plots_aco_cwd_trees, pc)
+df <- left_join(plots_aco, pc)
 
 write_csv(df, "/cloud/project/data/df.csv")
 ```

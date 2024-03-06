@@ -1,0 +1,40 @@
+---
+title: "Data Tidying"
+author: "Joshua A. Harkness"
+date: "2024-03-06"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r load-data-files, message = FALSE}
+plots <- read_csv("/cloud/project/data/hf131-01-plot.csv")
+trees <- read_csv("/cloud/project/data/hf131-02-tree.csv")
+cwd <- read_csv("/cloud/project/data/hf131-03-cwd.csv")
+aco <- read_csv("/cloud/project/data/hf131-04-aco.csv")
+pc <- read_csv("/cloud/project/data/hf131-05-pc-abund.csv")
+herps <- read_csv("/cloud/project/data/hf131-06-herps.csv")
+```
+
+#### More complex join.
+
+```{r}
+aco %>%
+  distinct(pcn)
+
+pc %>%
+  distinct(pc.no)
+```
+Since the `aco` dataframe is structure such that each row is a sampling event at a cover board with counts of P. cinereus, the authors lumped multiple unique identifiers for individual P. cinereus into one column (e.g. "115; 116").  I want these to match the values in the `pc.no` variable in the `pc` dataframe, which treats each P. cinereus as an observation.  Not super important since all observations are still grouped by plot and I don't plan to make comparisons below that level currently.
+
+```{r}
+aco %>%
+  uncount(pca)
+```
+
+```{r}
+count()
+```
+
