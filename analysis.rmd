@@ -307,7 +307,102 @@ glance(lm_svl_ts)
 Also significant (P = 0.02), again with very low R^2 (0.0088).
 
 #### Cluster Analysis
+Compare total length, snout-vent length, and weight between sexes of P. cinereus
+```{r}
+#install.packages("cluster")
+#install.packages("factoextra")
+library(cluster)
+library(factoextra)
+```
 
+```{r}
+pc_morpho <- df_pc %>%
+  dplyr::select(tl, svl, wt, sex) %>%
+  drop_na(sex) %>%
+  mutate(across(c(tl, svl, wt), scale)) %>% # Try with and without this line
+  drop_na()
+
+pc_means <- pc_morpho %>%
+  dplyr::select(-sex)
+
+k2 <- kmeans(pc_means, centers = 2, nstart = 25)
+k3 <- kmeans(pc_means, centers = 3, nstart = 25)
+
+## Calculate k4 and k5
+
+k4 <- kmeans(pc_means, centers = 4, nstart = 25)
+k5 <- kmeans(pc_means, centers = 5, nstart = 25)
+```
+Have to use `dplyr::select` because the `select` function is overwritten by another package.
+
+```{r}
+k2
+```
+
+
+```{r}
+p1 <- fviz_cluster(k2, geom = "point", data = pc_means) + ggtitle("k = 2")
+p2 <- fviz_cluster(k3, geom = "point",  data = pc_means) + ggtitle("k = 3")
+p3 <- fviz_cluster(k4, geom = "point",  data = pc_means) + ggtitle("k = 4")
+p4 <- fviz_cluster(k5, geom = "point",  data = pc_means) + ggtitle("k = 5")
+
+
+grid.arrange(p1, p2,  p3, p4, nrow = 2)
+```
+
+```{r}
+fviz_nbclust(pc_means, kmeans, method = "wss")
+```
+
+```{r}
+final <- k2
+
+pc_means %>%
+  mutate(sex = pc_morpho$sex,
+  cluster = final$cluster) %>%
+  group_by(cluster, sex) %>%
+  summarize(count = n()) %>%
+  ggplot() +
+  geom_col(aes(x = sex, y = count, fill = as.factor(cluster))) +
+  coord_flip() +
+  labs(fill = "Cluster")
+```
+
+Try this by forest type / site.
+
+```{r}
+pc_morpho_ft <- df_pc %>%
+  dplyr::select(tl, svl, wt, ft) %>%
+  drop_na(ft) %>%
+  mutate(across(c(tl, svl, wt), scale)) %>% # Try with and without this line
+  drop_na()
+
+pc_means_ft <- pc_morpho_ft %>%
+  dplyr::select(-ft)
+
+k2 <- kmeans(pc_means_ft, centers = 2, nstart = 25)
+k3 <- kmeans(pc_means_ft, centers = 3, nstart = 25)
+
+## Calculate k4 and k5
+
+k4 <- kmeans(pc_means_ft, centers = 4, nstart = 25)
+k5 <- kmeans(pc_means_ft, centers = 5, nstart = 25)
+```
+
+```{r}
+p1 <- fviz_cluster(k2, geom = "point", data = pc_means_ft) + ggtitle("k = 2")
+p2 <- fviz_cluster(k3, geom = "point",  data = pc_means_ft) + ggtitle("k = 3")
+p3 <- fviz_cluster(k4, geom = "point",  data = pc_means_ft) + ggtitle("k = 4")
+p4 <- fviz_cluster(k5, geom = "point",  data = pc_means_ft) + ggtitle("k = 5")
+
+
+grid.arrange(p1, p2,  p3, p4, nrow = 2)
+```
+
+```{r}
+fviz_nbclust(pc_means_ft, kmeans, method = "wss")
+```
+Seems like k = 2 probably is the better fit here.
 
 ## Biodiversity
 ```{r}
