@@ -319,3 +319,95 @@ nb_env <- glm.nb(n_ind ~ ft + ba + st.ha + ts + canopy.cover + avg.dc + vcwd.con
 summary(nb_env)
 ```
 Consider interaction effects here; some of these variables are definitely not independent.
+
+#### Logistic regression with presence/absence
+```{r}
+df_pc <- df_pc %>%
+  mutate(presence = as.factor(case_when(n_ind >= 1 ~ 1, n_ind == 0 ~ n_ind)))
+```
+
+```{r}
+df_pc %>%
+  ggplot(aes(x = rh, y = presence)) +
+  geom_jitter(height = 0.1, alpha = 0.25)
+```
+I think I'll use relative humidity for a logistic regression with one predictor, then I'll try multiple predictors.  Consider downsampling for presence and absence data.
+
+```{r}
+log_fit <- logistic_reg() %>%
+  set_engine("glm") %>%
+  fit(presence ~ rh, data = df_pc, family = "binomial")
+
+log_fit_tidy <- log_fit %>%
+  tidy()
+
+log_fit_tidy
+glance(log_fit)
+```
+
+Presence is significantly correlated with relative humidity, relationship is positive.  Need to plot this.
+
+```{r}
+log_fit2 <- logistic_reg() %>%
+  set_engine("glm") %>%
+  fit(presence ~ ba + canopy.cover + soil.ph + rh + soilt, data = df_pc, family = "binomial")
+
+log_fit2_tidy <- log_fit2 %>%
+  tidy()
+
+log_fit2_tidy
+glance(log_fit2)
+```
+Better fit than the presence ~ rh model.
+
+#### Build model to predict presence/absence based on environmental variables
+
+```{r}
+set.seed(117)
+
+abund_split <- initial_split(df_pc, prop = 0.8)
+
+training_data <- training(abund_split)
+testing_data <- testing(abund_split)
+```
+
+```{r}
+glimpse(training_data)
+glimpse(testing_data)
+```
+Consider downsampling here.
+
+```{r}
+log_fit_abund <- logistic_reg(engine = "glm") %>%
+  fit(presence ~ ba + canopy.cover + soil.ph + rh + soilt, data = training_data, family = "binomial")
+
+```
+
+```{r}
+predict(log_fit_abund, testing_data)
+```
+
+```{r}
+abund_pred <- predict(log_fit_abund, testing_data, type = "prob") %>%
+  bind_cols(testing_data %>% select(presence, ts))
+abund_pred
+```
+```{r}
+abund_pred %>%
+  arrange(desc(.pred_1)) %>%
+  print(n = 10)
+```
+
+
+```{r}
+abund_pred %>%
+  roc_curve(
+    truth = presence,
+    .pred_1,
+    event_level = "second"
+  ) %>%
+  autoplot()
+
+
+```
+Not a good fit.

@@ -90,26 +90,13 @@ nb_env_effect1 <- glm.nb(n_ind ~ ft * ts * ba * vcwd.con * cwd.con * st.ha + can
 summary(nb_env_effect1)
 ```
 
-
-
-#### Step-wise AIC comparisons
-```{r}
-fit = lm(n_ind ~ ts + ba + avg.dc + vcwd.con + soil.ph + rh, data = df_pc)
-step = stepAIC(fit, direction = "both")
-step$anova 
-step$coefficients
-```
+#### Hurdle model
 ```{r}
 #install.packages("pscl")
 library(pscl)
 
 nb_hurdle1 <- hurdle(n_ind ~ ft + ts + ba + st.ha + canopy.cover + cwd.con + vcwd.con + avg.dc + soil.ph + airt + rh + soilt, data = df_pc, dist = "negbin")
 summary(nb_hurdle1)
-```
-#### Hurdle NB with forest type interaction
-```{r}
-nb_hurdle2 <- hurdle(n_ind ~ ft * ts * ba + st.ha + canopy.cover + cwd.con * vcwd.con + avg.dc + soil.ph + airt * soilt + rh, data = df_pc, dist = "negbin")
-summary(nb_hurdle2)
 ```
 
 #### Compare AIC
@@ -121,10 +108,12 @@ aictab(cand.set = models, modnames = mod.names)
 ```
 
 ```{r}
-models <- list(nb_hurdle1, nb_hurdle2)
-mod.names <- c('Environmental model Hurdle NB', 'Env model w/ forest type')
+models <- list(nb_hurdle1)
+mod.names <- c('Environmental model Hurdle NB')
 aictab(cand.set = models, modnames = mod.names)
 ```
+Interesting, lowest AIC is the environmental model with forest type interaction effects, negative binomial (without hurdle).  The hurdle model has a Delta AIC of 239.67.
+
 
 #### Are P. cinereus more abundant in hemlock or mixed deciduous forests?
 ```{r}
