@@ -112,7 +112,7 @@ models <- list(nb_hurdle1)
 mod.names <- c('Environmental model Hurdle NB')
 aictab(cand.set = models, modnames = mod.names)
 ```
-Interesting, lowest AIC is the environmental model with forest type interaction effects, negative binomial (without hurdle).  The hurdle model has a Delta AIC of 239.67.
+Interesting, lowest AIC is the environmental model with forest type interaction effects, negative binomial (without hurdle).  The hurdle model has a Delta AIC of 239.67.  Hurdle model simply being penalized more for the hurdle component?  Not an appropriate comparison using AIC?
 
 
 #### Are P. cinereus more abundant in hemlock or mixed deciduous forests?
@@ -216,22 +216,6 @@ T-test first:
 t.test(wt ~ sex, data = df_pc)
 ```
 
-Now simple linear model.
-```{r}
-lm_wt_sex <- linear_reg(engine = "lm") %>%
-  fit(wt ~ sex, data = df_pc)
-
-lm_wt_sex_tidy <- lm_wt_sex %>%
-  tidy()
-
-lm_wt_sex_tidy
-```
-```{r}
-glance(lm_wt_sex)
-```
-
-Not sure which one of these is the better fit here.  Data is normally distributed and meets the assumptions of the t-test.  Also meets the assumptions of the linear model, except that sex is a discrete category and not a continuous vector, so it gives us a low R^2 but it does seem to be an applicable method here; interesting how similar but slightly different the P values are.
-
 I will also run T-tests for total length and snout-vent length as a function of sex.
 ```{r}
 t.test(tl ~ sex, data = df_pc)
@@ -246,22 +230,25 @@ Female P. cinereus are significantly heavier than males; total length and snout-
 box1 <- df_pc %>%
   ggplot(aes(x = ft, y = wt, fill = ft)) +
   geom_boxplot() +
-  labs(x = "Forest type",
+  geom_jitter(width = 0.1, alpha = 0.1) +
+  labs(x = "",
        y = "Weight (cg)")
 
 box2 <- df_pc %>%
   ggplot(aes(x = ft, y = tl, fill = ft)) +
   geom_boxplot() +
+  geom_jitter(width = 0.1, alpha = 0.1) +
   labs(x = "Forest type",
        y = "Total length (mm)")
 
 box3 <- df_pc %>%
   ggplot(aes(x = ft, y = svl, fill = ft)) +
   geom_boxplot() +
-  labs(x = "Forest type",
+  geom_jitter(width = 0.1, alpha = 0.1) +
+  labs(x = "",
        y = "Snout-vent length (mm)")
 
-grid.arrange(box1, box2, box3, ncol = 2)
+grid.arrange(box1, box2, box3, ncol = 3)
 ```
 
 ```{r}
@@ -318,6 +305,9 @@ lm_svl_ts_tidy
 glance(lm_svl_ts)
 ```
 Also significant (P = 0.02), again with very low R^2 (0.0088).
+
+#### Cluster Analysis
+
 
 ## Biodiversity
 ```{r}

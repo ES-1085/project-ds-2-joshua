@@ -197,10 +197,8 @@ p7 <- ggplot(df, aes(x = soilt)) +
   geom_histogram(fill = "skyblue", color = "black")
 p8 <- ggplot(df, aes(x = airt)) +
   geom_histogram(fill = "skyblue", color = "black")
-p9 <- ggplot(df, aes(x = dbh)) +
-  geom_histogram(fill = "skyblue", color = "black")
 
-grid.arrange(p1, p2, p3, p4, p5, p6, p7, p8, p9)
+grid.arrange(p1, p2, p3, p4, p5, p6, p7, p8)
 ```
 
 ```{r boxplot-soilph-ft}
