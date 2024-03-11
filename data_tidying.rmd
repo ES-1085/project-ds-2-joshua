@@ -31,10 +31,37 @@ sum(aco_abund$n_ind)
 ```
 241 individuals according to this data file, which includes all non-observations as zeroes.
 
-Erroneous count data that I used previously resulted from joining these data files with `plots`, which apparently duplicated some rows and gave higher counts.
+I'm going with 241 as reported by the sum of `n_ind` as reported above as it is more conservative than the 250 from the `pc` file and includes zeroes which are useful for modeling presence/absence.  Erroneous count data that I used previously resulted from joining these data files with `plots`, which apparently duplicated some rows and gave higher counts.
 
 ### Joining data files
 ```{r}
-
+aco_plots <- left_join(aco, plots)
+df <- left_join(aco_pc, pc)
 ```
+```{r}
+aco_plots %>%
+  uncount(pca)
+```
+Only joining the `aco` and `plots` data files gives the correct number of observations.
+```{r}
+pc_abund <- aco_plots %>%
+  group_by(aco) %>%
+  summarize(n_ind = sum(pca))
+
+pc_abund
+
+pc_abund %>%
+  distinct(n_ind)
+```
+Grouped by individual cover board (`aco`), of which there are 300.  This still gives us 241 P. cinereus observed (`n_ind` >= 1), with counts per cover board being 0-7.
+
+```{r}
+aco_uncount <- aco %>%
+  uncount(pca, .remove = FALSE)
+
+aco_uncount
+```
+Using `uncount` weighted by `pca` changes the dataframe such that each row now represents an individual observed P. cinereus instead of a count of P. cinereus observed at a specific cover board during a sampling event.  Once again, however, we are not including zeros in this dataset.
+
+
 
