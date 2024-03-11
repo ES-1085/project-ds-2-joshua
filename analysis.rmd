@@ -36,9 +36,10 @@ mass_towns <- st_read("/cloud/project/data/Community Boundaries (Towns) from Sur
 ## Data Tidying
 Redoing some initial analysis here by using `uncount` function to duplicate rows for which there are multiple salamanders observed; currently each observation is a count associated with a cover board, but I want each observation to be an individual salamander.
 
-```{r transform-crs-mass_towns}
-mass_towns <- st_transform(mass_towns, "+init=epsg:4326")
+```{r}
+
 ```
+
 
 ```{r plot-mass_towns-coords}
 coords_filtered <- coords %>%
@@ -50,6 +51,32 @@ ggplot(mass_towns) +
   xlim(-72.5, -72) +
   ylim(42.4, 42.7)
 ```
+```{r}
+ggplot(mass_towns) +
+  geom_sf() +
+  geom_point(data = coords, (aes(x = long_dd, y = lat_dd, color = ft, shape = ft)), size = 2) +
+  xlim(-72.21, -72.22) +
+  ylim(42.505, 42.513) +
+  labs(x = "Long",
+       y = "Lat",
+       title = "Paired sites",
+       subtitle = "Tom Swamp, Harvard Forest",
+       color = "Forest Type",
+       shape = "Forest Type") +
+  theme_bw() +
+  ggspatial::annotation_scale(
+    location = "bl",
+    bar_cols = c("grey60", "white"),
+    text_family = "ArcherPro Book"
+  ) +
+  ggspatial::annotation_north_arrow(
+    location = "tr", which_north = "true",
+    pad_x = unit(0, "in"), pad_y = unit(0.2, "in"),
+    style = ggspatial::north_arrow_fancy_orienteering(
+      fill = c("grey40", "white"),
+      line_col = "grey20",
+      text_family = "ArcherPro Book"))
+```
 
 ## P. cinereus abundance
 #### Calculate abundance
@@ -59,9 +86,9 @@ pc_abund <- df %>%
   count(pca, sort = TRUE) %>%
   summarise(n_ind = n*pca) %>%
   arrange(desc(n_ind))
-
-
-pc_abund
+```
+```{r}
+sum(df$pca)
 ```
 
 ```{r}
@@ -81,8 +108,8 @@ df_pc$aco = as.character(df_pc$aco)
 df_pc$asn = as.character(df_pc$asn)
 
 #select useful columns
-df_pc <- df_pc %>%
-  dplyr::select(plot, site, ft, asn, aco, ba, st.ha, ts, canopy.cover, cwd.no, cwd.con, vcwd, vcwd.con, avg.dc, tot.snags, avg.snag.dbh, soil.ph, date, airt, rh, soilt, n_ind, pcn, pc.no, p, svl, tl, wt, sex)
+#df_pc <- df_pc %>%
+#  dplyr::select(plot, site, ft, asn, aco, ba, st.ha, ts, canopy.cover, cwd.no, cwd.con, vcwd, vcwd.con, avg.dc, tot.snags, avg.snag.dbh, soil.ph, date, airt, rh, soilt, n_ind, pcn, pc.no, p, svl, tl, wt, sex)
 ```
 
 It is worth noting that because each row in the `aco` dataframe represents a sampling event at a specific cover board rather than an individual P. cinereus, there are multiple unique identifiers lumped into the `pcn` column but these are individual values in the `pc.no` column from the `pc` dataframe (which does treat every row as an individual P. cinereus).  These rows do not line up as a result, but they are matched to the appropriate 
@@ -91,6 +118,10 @@ It is worth noting that because each row in the `aco` dataframe represents a sam
 #  mutate(presence = case_when(pca >= 1 ~ 1, pca == 0 ~ pca))
 ```
 Need to change `n_ind` -- it looks like it's not in line with other rows in the dataset.
+
+```{r}
+sum(df_pc$n_ind)
+```
 
 ### Modeling
 Using negative binomial framework here as it provided the lowest AICs in model testing, given highly skewed count data with variance not equal to mean.  Quasi-Poisson may also be applicable here.
@@ -218,16 +249,44 @@ grid.arrange(wt_plot, tl_plot, svl_plot)
 
 Density distributions for Plethodon cinereus weight (in centigrams), total and snout-vent length (in millimeters).  Females appear to be somewhat heavier and longer than males.  Observations with missing values removed.  Skew in total length but not snout-vent length may be due to salamanders with missing/regenerating tails.
 
-```{r}
-df_pc %>%
+```{r boxplot-morpho-sex}
+box1 <- df_pc %>%
   drop_na(sex) %>%
   ggplot(aes(x = sex, y = wt, fill = sex)) +
   geom_boxplot() +
-  geom_jitter(width = 0.025, alpha = 0.25) +
-  labs(x = "Sex",
+  geom_jitter(width = 0.1, alpha = 0.1) +
+  labs(x = "",
        y = "Weight (cg)") +
+  scale_fill_manual(values = c("darkseagreen2", "lavender")) +
   theme_bw() +
-  theme(legend.position = "none")
+  theme(legend.position = "none") +
+  annotate("text", x = 2.1, y = 162, label = "P < 0.001")
+
+box2 <- df_pc %>%
+  drop_na(sex) %>%
+  ggplot(aes(x = sex, y = tl, fill = sex)) +
+  geom_boxplot() +
+  geom_jitter(width = 0.1, alpha = 0.1) +
+  labs(x = "", 
+       y = "Total length (mm)") +
+  scale_fill_manual(values = c("wheat", "lavender")) +
+  theme_bw() +
+  theme(legend.position = "none") +
+  annotate("text", x = 2.1, y = 99, label = "P < 0.001")
+
+box3 <- df_pc %>%
+  drop_na(sex) %>%
+  ggplot(aes(x = sex, y = svl, fill = sex)) +
+  geom_boxplot() +
+  geom_jitter(width = 0.1, alpha = 0.1) +
+  labs(x = "",
+       y = "Snout-vent length (mm)") +
+  scale_fill_manual(values = c("wheat", "lavender")) +
+  theme_bw() +
+  theme(legend.position = "none") +
+  annotate("text", x = 2.1, y = 56, label = "P < 0.001")
+
+grid.arrange(box1, box2, box3, ncol = 3, top = textGrob("P. cinereus morphometrics by sex"), bottom = textGrob("Sex"))
 ```
 
 Normally distributed, so we can use a T-test or simple linear model.
@@ -247,22 +306,26 @@ t.test(svl ~ sex, data = df_pc)
 Female P. cinereus are significantly heavier than males; total length and snout-vent length were also significantly longer in females than males.
 
 #### By forest type
-```{r}
+```{r boxplot-morpho-ft, warning = FALSE}
 box1 <- df_pc %>%
   ggplot(aes(x = ft, y = wt, fill = ft)) +
   geom_boxplot() +
   geom_jitter(width = 0.1, alpha = 0.1) +
   labs(x = "",
        y = "Weight (cg)") +
-  theme(legend.position = "none")
+  theme_bw() +
+  theme(legend.position = "none") +
+  annotate("text", x = 2.1, y = 162, label = "P = 0.069")
 
 box2 <- df_pc %>%
   ggplot(aes(x = ft, y = tl, fill = ft)) +
   geom_boxplot() +
   geom_jitter(width = 0.1, alpha = 0.1) +
-  labs(x = "Forest type",
+  labs(x = "", 
        y = "Total length (mm)") +
-  theme(legend.position = "none")
+  theme_bw() +
+  theme(legend.position = "none") +
+  annotate("text", x = 2.1, y = 99, label = "P = 0.089")
 
 box3 <- df_pc %>%
   ggplot(aes(x = ft, y = svl, fill = ft)) +
@@ -270,23 +333,28 @@ box3 <- df_pc %>%
   geom_jitter(width = 0.1, alpha = 0.1) +
   labs(x = "",
        y = "Snout-vent length (mm)") +
-  theme(legend.position = "none")
+  theme_bw() +
+  theme(legend.position = "none") +
+  annotate("text", x = 2.1, y = 56, label = "P = 0.398")
 
-grid.arrange(box1, box2, box3, ncol = 3, top = textGrob("P. cinereus morphometrics by forest type"))
+grid.arrange(box1, box2, box3, ncol = 3, top = textGrob("P. cinereus morphometrics by forest type"), bottom = textGrob("Forest type"))
 ```
 
 ```{r}
 t.test(wt ~ ft, data = df_pc)
+wilcox.test(df_pc$wt ~ df_pc$ft)
 ```
 No significant difference in mean weight between mixed deciduous and hemlock-dominated stands.
 
 ```{r}
 t.test(tl ~ ft, data = df_pc)
+wilcox.test(df_pc$tl ~ df_pc$ft)
 ```
 No significant difference in mean total length between mixed deciduous and hemlock stands.
 
 ```{r}
 t.test(svl ~ ft, data = df_pc)
+wilcox.test(df_pc$svl ~ df_pc$ft)
 ```
 No significant difference in mean snout-vent length between mixed deciduous and hemlock forests.
 
@@ -372,6 +440,7 @@ p4 <- fviz_cluster(k5, geom = "point",  data = pc_means) + ggtitle("k = 5")
 
 
 grid.arrange(p1, p2,  p3, p4, nrow = 2)
+p1
 ```
 
 ```{r}
@@ -387,9 +456,12 @@ pc_means %>%
   group_by(cluster, sex) %>%
   summarize(count = n()) %>%
   ggplot() +
-  geom_col(aes(x = sex, y = count, fill = as.factor(cluster))) +
+  geom_col(aes(x = sex, y = count, fill = as.factor(cluster)), color = "black") +
+  scale_fill_manual(values = c("skyblue", "red4")) +
   coord_flip() +
-  labs(fill = "Cluster")
+  labs(x = "Sex",
+       y = "Count",
+       fill = "Cluster")
 ```
 
 Try this by forest type / site.

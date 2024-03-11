@@ -28,7 +28,7 @@ df <- read_csv("/cloud/project/data/df.csv")
 ```{r}
 df %>%
   ggplot(aes(x = aco, y = pca)) +
-  geom_jitter()
+  geom_jitter(alpha = 0.01)
 ```
 No more than 3 P. cinereus were observed under a singe cover board during any one survey.  `geom_jitter` reveals some overlap -- that there are multiple identical counts (presumably accounting for repeated visits to the same cover board).  This explains why when grouped by `aco` (below) we find some cover boards have many more than 3 salamanders observed.
 
@@ -91,41 +91,50 @@ df_pc <- left_join(df, pc_abund)
 ## Plot useful variables
 ```{r}
 p1 <- ggplot(df_pc, aes(x = ba, y = n_ind)) +
-  geom_point() +
+  geom_jitter(alpha = 0.1) +
   geom_smooth(method = "lm") +
-  labs(x = "Basal area (m2/ha)")
+  labs(x = "Basal area (m2/ha)",
+       y = "Count")
 p2 <- ggplot(df_pc, aes(x = st.ha, y = n_ind)) +
-  geom_point() +
+  geom_jitter(alpha = 0.1) +
   geom_smooth(method = "lm") +
-  labs(x = "Stems/ha")
+  labs(x = "Stems/ha",
+       y = "Count")
 p3 <- ggplot(df_pc, aes(x = ts, y = n_ind)) +
-  geom_point() +
+  geom_jitter(alpha = 0.1) +
   geom_smooth(method = "lm") +
-  labs(x = "Percent hemlock")
+  labs(x = "Percent hemlock",
+       y = "Count")
 p4 <- ggplot(df_pc, aes(x = canopy.cover, y = n_ind)) +
-  geom_point() +
+  geom_jitter(alpha = 0.1) +
   geom_smooth(method = "lm") +
-  labs(x = "Percent canopy cover")
+  labs(x = "Percent canopy cover",
+       y = "Count")
 p5 <- ggplot(df_pc, aes(x = cwd.con, y = n_ind)) +
-  geom_point() +
+  geom_jitter(alpha = 0.1) +
   geom_smooth(method = "lm") +
-  labs(x = "Number CWD pieces contact")
+  labs(x = "Number CWD pieces contact",
+       y = "Count")
 p6 <- ggplot(df_pc, aes(x = vcwd.con, y = n_ind)) +
-  geom_point(alpha = 0.25) +
+  geom_jitter(alpha = 0.1) +
   geom_smooth(method = "lm") +
-  labs(x = "Volume CWD contact")
+  labs(x = "Volume CWD contact",
+       y = "Count")
 p7 <- ggplot(df_pc, aes(x = avg.dc, y = n_ind)) +
-  geom_point() +
+  geom_jitter(alpha = 0.1) +
   geom_smooth(method = "lm") +
-  labs(x = "Average decay class")
+  labs(x = "Average decay class",
+       y = "Count")
 p8 <- ggplot(df_pc, aes(x = tot.snags, y = n_ind)) +
-  geom_point() +
+  geom_jitter(alpha = 0.1) +
   geom_smooth(method = "lm") +
-  labs(x = "Total snags")
+  labs(x = "Total snags",
+       y = "Count")
 p9 <- ggplot(df_pc, aes(x = avg.snag.dbh, y = n_ind)) +
-  geom_point() +
+  geom_jitter(alpha = 0.1) +
   geom_smooth(method = "lm") +
-  labs(x = "Average snag DBH")
+  labs(x = "Average snag DBH",
+       y = "Count")
 
 grid.arrange(p1, p2, p3, p4, p5, p6, p7, p8, p9)
 ```

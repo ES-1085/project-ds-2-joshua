@@ -18,23 +18,23 @@ pc <- read_csv("/cloud/project/data/hf131-05-pc-abund.csv")
 herps <- read_csv("/cloud/project/data/hf131-06-herps.csv")
 ```
 
-#### More complex join.
-
 ```{r}
-aco %>%
-  distinct(pcn)
-
-pc %>%
-  distinct(pc.no)
+n_distinct(pc$pc.no)
 ```
-Since the `aco` dataframe is structure such that each row is a sampling event at a cover board with counts of P. cinereus, the authors lumped multiple unique identifiers for individual P. cinereus into one column (e.g. "115; 116").  I want these to match the values in the `pc.no` variable in the `pc` dataframe, which treats each P. cinereus as an observation.  Not super important since all observations are still grouped by plot and I don't plan to make comparisons below that level currently.
+250 uniquely identified P. cinereus according to this data file.  Does not include zeros so not useful for presence/absence.
 
 ```{r}
-aco %>%
-  uncount(pca)
+aco_abund <- aco %>%
+  summarize(n_ind = sum(pca))
+
+sum(aco_abund$n_ind)
 ```
+241 individuals according to this data file, which includes all non-observations as zeroes.
 
+Erroneous count data that I used previously resulted from joining these data files with `plots`, which apparently duplicated some rows and gave higher counts.
+
+### Joining data files
 ```{r}
-count()
+
 ```
 

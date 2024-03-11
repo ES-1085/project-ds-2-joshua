@@ -32,8 +32,6 @@ library(gridExtra)
 ### Load Datafiles from GitHub Repository
 ```{r load-data-files, message = FALSE}
 plots <- read_csv("/cloud/project/data/hf131-01-plot.csv")
-trees <- read_csv("/cloud/project/data/hf131-02-tree.csv")
-cwd <- read_csv("/cloud/project/data/hf131-03-cwd.csv")
 aco <- read_csv("/cloud/project/data/hf131-04-aco.csv")
 pc <- read_csv("/cloud/project/data/hf131-05-pc-abund.csv")
 herps <- read_csv("/cloud/project/data/hf131-06-herps.csv")
@@ -41,20 +39,35 @@ herps <- read_csv("/cloud/project/data/hf131-06-herps.csv")
 
 ```{r glimpse-data-files}
 glimpse(plots)
-glimpse(trees)
-glimpse(cwd)
 glimpse(aco)
 glimpse(pc)
 glimpse(herps)
 ```
+```{r}
+aco_abund <- aco %>%
+  group_by(aco) %>%
+  summarize(n_ind = sum(pca))
+```
+This gives correct number (241).
+
+
 
 ```{r join-data-files}
 # joining all except herps for now
-plots_aco <- left_join(plots, aco)
-df <- left_join(plots_aco, pc)
+plots_aco <- full_join(plots, aco)
+df <- full_join(plots_aco, pc)
 
 write_csv(df, "/cloud/project/data/df.csv")
 ```
+
+```{r}
+pc_abund <- df %>%
+  group_by(aco) %>%
+  summarize(n_ind = sum(pca))
+
+sum(pc_abund$n_ind, na.rm = T)
+```
+
 ## 3. Ethics review
 Limitations:  Sampling design has no way to identify 'recaptures'; if the same salamanders were staying at or returning to the same cover board across multiple sampling days, there is no definitive way to identify how these individuals are impacting counts.  The 2-3 week sampling interval may actually help to address this pseudoreplication, since there may be some turnover in individuals salamanders using a cover board station.  Data was collected over only a single season and may not be representative of P. cinereus population dynamics on a longer scale; another year may show different patterns of abundance and distribution and some factor other than forest type may be involved.  Another limitation is that by introducing a novel habitat feature (cover boards), use of existing habitat features by herps is altered.  Since this is an observational and not experimental study, there is no way to infer causation between any variables.
 
@@ -72,7 +85,7 @@ coords <- df %>%
          lat_dm = as.numeric(str_extract(lat, "(?<=\xb0)\\d+.\\d+")),
          long_deg = as.numeric(str_extract(long, "\\d+(?=\xb0)")),
          long_dm = as.numeric(str_extract(long, "(?<=\xb0)\\d+.\\d+"))) %>%
-  select(site, plot, asn, aco, lat_deg, lat_dm, long_deg, long_dm)
+  dplyr::select(ft, site, plot, asn, aco, lat_deg, lat_dm, long_deg, long_dm)
 ```
 
 ```{r convert-lat-long-to-dd}
@@ -90,7 +103,7 @@ df$lat_dd <- as.numeric(coords$lat_dd)
 df$long_dd <- as.numeric(coords$long_dd)
 
 coords <- coords %>%
-  select(site, plot, asn, aco, lat_dd, long_dd)
+  dplyr::select(ft, site, plot, asn, aco, lat_dd, long_dd)
 
 write_csv(coords, path = "/cloud/project/data/coords.csv")
 ```
@@ -109,7 +122,22 @@ mass_towns <- st_transform(mass_towns, "+init=epsg:4326")
 ```{r plot-mass_towns-coords}
 ggplot(mass_towns) +
   geom_sf() +
-  geom_point(data = coords, (aes(x = long_dd, y = lat_dd)), alpha = 0.5)
+  geom_point(data = coords, (aes(x = long_dd, y = lat_dd)), alpha = 0.5) +
+  labs(x = "Long",
+       y = "Lat") +
+  theme_bw() +
+  ggspatial::annotation_north_arrow(
+    location = "tr", which_north = "true",
+    pad_x = unit(0, "in"), pad_y = unit(0.2, "in"),
+    style = ggspatial::north_arrow_fancy_orienteering(
+      fill = c("grey40", "white"),
+      line_col = "grey20",
+      text_family = "ArcherPro Book")) +
+  ggspatial::annotation_scale(
+    location = "bl",
+    bar_cols = c("grey60", "white"),
+    text_family = "ArcherPro Book"
+  )
 ```
 Zoomed-in view:
 ```{r}
