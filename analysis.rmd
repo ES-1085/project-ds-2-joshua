@@ -29,10 +29,27 @@ library(iNEXT)
 #### Load data
 ```{r}
 df <- read_csv("/cloud/project/data/df.csv")
+coords <- read_csv("/cloud/project/data/coords.csv")
+mass_towns <- st_read("/cloud/project/data/Community Boundaries (Towns) from Survey Points.shp")
 ```
 
 ## Data Tidying
 Redoing some initial analysis here by using `uncount` function to duplicate rows for which there are multiple salamanders observed; currently each observation is a count associated with a cover board, but I want each observation to be an individual salamander.
+
+```{r transform-crs-mass_towns}
+mass_towns <- st_transform(mass_towns, "+init=epsg:4326")
+```
+
+```{r plot-mass_towns-coords}
+coords_filtered <- coords %>%
+  distinct(site, .keep_all = TRUE)
+
+ggplot(mass_towns) +
+  geom_sf() +
+  geom_count(data = coords_filtered, (aes(x = long_dd, y = lat_dd)), alpha = 0.25) +
+  xlim(-72.5, -72) +
+  ylim(42.4, 42.7)
+```
 
 ## P. cinereus abundance
 #### Calculate abundance
@@ -65,7 +82,7 @@ df_pc$asn = as.character(df_pc$asn)
 
 #select useful columns
 df_pc <- df_pc %>%
-  select(plot, site, ft, asn, aco, ba, st.ha, ts, canopy.cover, cwd.no, cwd.con, vcwd, vcwd.con, avg.dc, tot.snags, avg.snag.dbh, soil.ph, date, airt, rh, soilt, n_ind, pcn, pc.no, p, svl, tl, wt, sex)
+  dplyr::select(plot, site, ft, asn, aco, ba, st.ha, ts, canopy.cover, cwd.no, cwd.con, vcwd, vcwd.con, avg.dc, tot.snags, avg.snag.dbh, soil.ph, date, airt, rh, soilt, n_ind, pcn, pc.no, p, svl, tl, wt, sex)
 ```
 
 It is worth noting that because each row in the `aco` dataframe represents a sampling event at a specific cover board rather than an individual P. cinereus, there are multiple unique identifiers lumped into the `pcn` column but these are individual values in the `pc.no` column from the `pc` dataframe (which does treat every row as an individual P. cinereus).  These rows do not line up as a result, but they are matched to the appropriate 
@@ -168,11 +185,13 @@ wt_plot <- df_pc %>%
   drop_na(sex) %>%
   ggplot(aes(x = wt, fill = sex)) +
   geom_density(alpha = 0.5) +
-  labs(x = "Weight (cg)",
+  labs(title = "P. cinereus morphometrics by sex",
+       x = "Weight (cg)",
        y = "",
        fill = "Sex") +
   theme(legend.position = c(0.96, 0.85)) +
-  theme(legend.title = element_blank())
+  theme(legend.title = element_blank()) +
+  scale_fill_viridis_d()
 
 tl_plot <- df_pc %>%
   drop_na(sex) %>%
@@ -180,7 +199,8 @@ tl_plot <- df_pc %>%
   geom_density(alpha = 0.5) +
   labs(x = "Total length (mm)",
        y = "Density") +
-  theme(legend.position = "none")
+  theme(legend.position = "none") +
+  scale_fill_viridis_d()
 
 svl_plot <- df_pc %>%
   drop_na(sex) %>%
@@ -188,7 +208,8 @@ svl_plot <- df_pc %>%
   geom_density(alpha = 0.5) +
   labs(x = "Snout-vent length (mm)",
        y = "") +
-  theme(legend.position = "none") 
+  theme(legend.position = "none")  +
+  scale_fill_viridis_d()
 
 grid.arrange(wt_plot, tl_plot, svl_plot)
 
@@ -232,23 +253,26 @@ box1 <- df_pc %>%
   geom_boxplot() +
   geom_jitter(width = 0.1, alpha = 0.1) +
   labs(x = "",
-       y = "Weight (cg)")
+       y = "Weight (cg)") +
+  theme(legend.position = "none")
 
 box2 <- df_pc %>%
   ggplot(aes(x = ft, y = tl, fill = ft)) +
   geom_boxplot() +
   geom_jitter(width = 0.1, alpha = 0.1) +
   labs(x = "Forest type",
-       y = "Total length (mm)")
+       y = "Total length (mm)") +
+  theme(legend.position = "none")
 
 box3 <- df_pc %>%
   ggplot(aes(x = ft, y = svl, fill = ft)) +
   geom_boxplot() +
   geom_jitter(width = 0.1, alpha = 0.1) +
   labs(x = "",
-       y = "Snout-vent length (mm)")
+       y = "Snout-vent length (mm)") +
+  theme(legend.position = "none")
 
-grid.arrange(box1, box2, box3, ncol = 3)
+grid.arrange(box1, box2, box3, ncol = 3, top = textGrob("P. cinereus morphometrics by forest type"))
 ```
 
 ```{r}
@@ -403,6 +427,20 @@ grid.arrange(p1, p2,  p3, p4, nrow = 2)
 fviz_nbclust(pc_means_ft, kmeans, method = "wss")
 ```
 Seems like k = 2 probably is the better fit here.
+
+```{r}
+final <- k2
+
+pc_means_ft %>%
+  mutate(ft = pc_morpho_ft$ft,
+  cluster = final$cluster) %>%
+  group_by(cluster, ft) %>%
+  summarize(count = n()) %>%
+  ggplot() +
+  geom_col(aes(x = ft, y = count, fill = as.factor(cluster))) +
+  coord_flip() +
+  labs(fill = "Cluster")
+```
 
 ## Biodiversity
 ```{r}
