@@ -38,16 +38,12 @@ herps <- read_csv("/cloud/project/data/hf131-06-herps.csv")
 ## P. cinereus abundance
 ### Calculate abundance per cover board
 
-```{r}
+```{r select-vars-aco}
 aco <- aco %>%
   dplyr::select(plot, asn, aco, pca, osn, other.sp)
 ```
 
-```{r}
-n_distinct(aco$aco)
-```
-
-```{r}
+```{r calc-abund-aco}
 aco_abund <- aco %>%
   group_by(plot, asn, aco) %>%
   summarize(n_pc = sum(pca), .groups = "keep")
@@ -56,20 +52,20 @@ aco_abund
 ```
 Still getting 241 detections of P. cinereus, but when grouping by `plot` and `asn`, we get 310 cover board observations instead of the original 300 -- not sure why it's doing this, but presumbly it's only adding a ten zeros to the dataframe, so I'm going to let it go at that.
 
-```{r}
+```{r join-aco_abund-plots}
 df <- left_join(aco_abund, plots)
 df
 ```
-```{r}
+```{r glimpse-df}
 glimpse(df)
 sum(df$n_pc)
 ```
 Now 310 cover board observations, still with 241 P. cinereus detections.
-```{r}
+```{r check-unique-n_pc-vals}
 unique(df$n_pc)
 ```
 
-```{r}
+```{r plot-violin1}
 violin1 <- df %>%
   ggplot(aes(x = ft, y = n_pc, fill = ft)) +
   geom_violin() +
@@ -85,7 +81,7 @@ violin1
 ```
 
 
-```{r}
+```{r plot-errbar1}
 errbar1 <- df %>%
   group_by(ft) %>%
   summarise(mean = mean(n_pc),
@@ -104,7 +100,7 @@ errbar1 <- df %>%
 errbar1
 ```
 
-```{r}
+```{r plot-inset1}
 main.plot <- violin1
 
 inset.plot <- errbar1
@@ -120,7 +116,7 @@ plot.with.inset
 Interesting that the higher outliers in the hemlock group make the mean higher for that group, while the medians of the two groups are the same.  Is median a good summary statistic when it is equal to zero?
 
 Wilcoxon test for difference given the extreme skew.
-```{r}
+```{r test-wilcox-n_pc-df}
 wilcox.test(df$n_pc ~ df$ft)
 ```
 Report: I found no significant difference in mean abundance per cover board between mixed deciduous and hemlock forests (Wilcoxon rank sum test, W = 1198, P = 0.982).
