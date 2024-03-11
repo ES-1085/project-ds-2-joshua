@@ -65,16 +65,16 @@ pc_abund %>%
 ```
 Grouped by individual cover board (`aco`), of which there are 300.  This still gives us 241 P. cinereus observed (`n_ind` >= 1), with counts per cover board being 0-7.  I may join the `pc` dataframe (which includes morphometrics) to the `plots` dataframe separately to preserve the correct counts.  I was unable to find a join method that correctly merged the two dataframes without inflating count data.
 
+Group by appropriate category then calculate abundance individual as `summarize(n_ind = sum(pca))` to avoid duplicates.
+
+```{r}
+write_csv(df_abund, "/cloud/project/data/df_abund.csv")
+```
 
 ```{r}
 df_abund %>%
-  group_by(aco) %>%
-  mutate(n_ind = sum(pca))
-
-write_csv(df_abund, "/cloud/project/data/df_abund.csv")
-```
-```{r}
-sum(df_abund$n_ind)
+  group_by(ft) %>%
+  summarize(n_ind = sum(pca))
 ```
 
 
