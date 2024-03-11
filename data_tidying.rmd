@@ -71,10 +71,3 @@ Group by appropriate category then calculate abundance individual as `summarize(
 write_csv(df_abund, "/cloud/project/data/df_abund.csv")
 ```
 
-```{r}
-df_abund %>%
-  group_by(ft) %>%
-  summarize(n_ind = sum(pca))
-```
-
-

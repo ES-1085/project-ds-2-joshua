@@ -24,104 +24,82 @@ library(MASS)
 library(simfit)
 library(ggpmisc)
 library(iNEXT)
+library(pscl)
 ```
 
-#### Load data
-```{r}
-df <- read_csv("/cloud/project/data/df.csv")
-coords <- read_csv("/cloud/project/data/coords.csv")
-mass_towns <- st_read("/cloud/project/data/Community Boundaries (Towns) from Survey Points.shp")
-```
-
-## Data Tidying
-Redoing some initial analysis here by using `uncount` function to duplicate rows for which there are multiple salamanders observed; currently each observation is a count associated with a cover board, but I want each observation to be an individual salamander.
-
-```{r}
-
-```
-
-
-```{r plot-mass_towns-coords}
-coords_filtered <- coords %>%
-  distinct(site, .keep_all = TRUE)
-
-ggplot(mass_towns) +
-  geom_sf() +
-  geom_count(data = coords_filtered, (aes(x = long_dd, y = lat_dd)), alpha = 0.25) +
-  xlim(-72.5, -72) +
-  ylim(42.4, 42.7)
+## Load Data
+```{r load-datafiles}
+plots <- read_csv("/cloud/project/data/hf131-01-plot.csv")
+aco <- read_csv("/cloud/project/data/hf131-04-aco.csv")
+pc <- read_csv("/cloud/project/data/hf131-05-pc-abund.csv")
+herps <- read_csv("/cloud/project/data/hf131-06-herps.csv")
 ```
 ```{r}
-ggplot(mass_towns) +
-  geom_sf() +
-  geom_point(data = coords, (aes(x = long_dd, y = lat_dd, color = ft, shape = ft)), size = 2) +
-  xlim(-72.21, -72.22) +
-  ylim(42.505, 42.513) +
-  labs(x = "Long",
-       y = "Lat",
-       title = "Paired sites",
-       subtitle = "Tom Swamp, Harvard Forest",
-       color = "Forest Type",
-       shape = "Forest Type") +
-  theme_bw() +
-  ggspatial::annotation_scale(
-    location = "bl",
-    bar_cols = c("grey60", "white"),
-    text_family = "ArcherPro Book"
-  ) +
-  ggspatial::annotation_north_arrow(
-    location = "tr", which_north = "true",
-    pad_x = unit(0, "in"), pad_y = unit(0.2, "in"),
-    style = ggspatial::north_arrow_fancy_orienteering(
-      fill = c("grey40", "white"),
-      line_col = "grey20",
-      text_family = "ArcherPro Book"))
-```
-
-## P. cinereus abundance
-#### Calculate abundance
-```{r}
-pc_abund <- df %>%
-  group_by(ft, site, plot, asn, aco) %>%
-  count(pca, sort = TRUE) %>%
-  summarise(n_ind = n*pca) %>%
-  arrange(desc(n_ind))
-```
-```{r}
-sum(df$pca)
+aco <- aco %>%
+  dplyr::select(plot, asn, aco, pca, osn, other.sp)
 ```
 
 ```{r}
-pc_abund %>%
-  filter(plot == "SC1TS") %>%
-  ggplot(aes(x = aco, y = n_ind)) +
-  geom_col()
+n_distinct(aco$aco)
 ```
-Looks good so far.
-
-
-#### Join dataframes
-```{r}
-df_pc <- left_join(df, pc_abund)
-
-df_pc$aco = as.character(df_pc$aco)
-df_pc$asn = as.character(df_pc$asn)
-
-#select useful columns
-#df_pc <- df_pc %>%
-#  dplyr::select(plot, site, ft, asn, aco, ba, st.ha, ts, canopy.cover, cwd.no, cwd.con, vcwd, vcwd.con, avg.dc, tot.snags, avg.snag.dbh, soil.ph, date, airt, rh, soilt, n_ind, pcn, pc.no, p, svl, tl, wt, sex)
-```
-
-It is worth noting that because each row in the `aco` dataframe represents a sampling event at a specific cover board rather than an individual P. cinereus, there are multiple unique identifiers lumped into the `pcn` column but these are individual values in the `pc.no` column from the `pc` dataframe (which does treat every row as an individual P. cinereus).  These rows do not line up as a result, but they are matched to the appropriate 
-```{r}
-#df_pc %>%
-#  mutate(presence = case_when(pca >= 1 ~ 1, pca == 0 ~ pca))
-```
-Need to change `n_ind` -- it looks like it's not in line with other rows in the dataset.
 
 ```{r}
-sum(df_pc$n_ind)
+aco_abund <- aco %>%
+  group_by(plot, asn, aco) %>%
+  summarize(n_pc = sum(pca), .groups = "keep")
+
+aco_abund
 ```
+Still getting 241 detections of P. cinereus, but when grouping by `plot` and `asn`, we get 310 cover board observations instead of the original 300 -- not sure why it's doing this, but presumbly it's only adding a ten zeros to the dataframe, so I'm going to let it go at that.
+
+```{r}
+df <- left_join(aco_abund, plots)
+df
+```
+```{r}
+glimpse(df)
+sum(df$n_pc)
+```
+Now 310 cover board observations, still with 241 P. cinereus detections.
+```{r}
+unique(df$n_pc)
+```
+
+```{r}
+df %>%
+  ggplot(aes(x = ft, y = n_pc, fill = ft)) +
+  geom_violin() +
+  labs(title = "P. cinereus abundance by forest type",
+       x = "Forest type",
+       y = "Mean abundance per cover board") +
+  theme(legend.position = "none") +
+  scale_x_discrete(labels = c("Mixed deciduous", "Hemlock"))
+```
+
+```{r}
+df %>%
+  group_by(ft) %>%
+  summarise(mean = mean(n_pc),
+            sd = sd(n_pc),
+            n = n(),
+            SE = sd(n_pc) / sqrt(n())) %>%
+  ggplot(aes(x = ft, y = mean)) +
+  geom_point(shape = 15, size = 3) +
+  geom_errorbar(aes(ymin = mean - SE, ymax = mean + SE), width = 0.2) +
+  labs(title = "P. cinereus abundance by forest type",
+       x = "Forest type",
+       y = "Mean abundance per cover board") +
+  scale_x_discrete(labels = c("Mixed deciduous", "Hemlock")) +
+  theme_classic()
+```
+
+  ggplot(aes(x = ft, y = mean_n)) +
+  geom_errorbar(ymin = mean_n - sd_n, ymax = mean_n + sd_n, width = 3)
+```
+
+
+
+
 
 ### Modeling
 Using negative binomial framework here as it provided the lowest AICs in model testing, given highly skewed count data with variance not equal to mean.  Quasi-Poisson may also be applicable here.
