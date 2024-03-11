@@ -25,6 +25,7 @@ library(simfit)
 library(ggpmisc)
 library(iNEXT)
 library(pscl)
+library(cowplot)
 ```
 
 ## Load Data
@@ -34,6 +35,9 @@ aco <- read_csv("/cloud/project/data/hf131-04-aco.csv")
 pc <- read_csv("/cloud/project/data/hf131-05-pc-abund.csv")
 herps <- read_csv("/cloud/project/data/hf131-06-herps.csv")
 ```
+## P. cinereus abundance
+### Calculate abundance per cover board
+
 ```{r}
 aco <- aco %>%
   dplyr::select(plot, asn, aco, pca, osn, other.sp)
@@ -66,18 +70,23 @@ unique(df$n_pc)
 ```
 
 ```{r}
-df %>%
+violin1 <- df %>%
   ggplot(aes(x = ft, y = n_pc, fill = ft)) +
   geom_violin() +
   labs(title = "P. cinereus abundance by forest type",
        x = "Forest type",
-       y = "Mean abundance per cover board") +
+       y = "Abundance per cover board") +
+  theme_classic() +
   theme(legend.position = "none") +
-  scale_x_discrete(labels = c("Mixed deciduous", "Hemlock"))
+  scale_x_discrete(labels = c("Mixed deciduous", "Hemlock")) +
+  ylim(0,9)
+
+violin1
 ```
 
+
 ```{r}
-df %>%
+errbar1 <- df %>%
   group_by(ft) %>%
   summarise(mean = mean(n_pc),
             sd = sd(n_pc),
@@ -86,19 +95,35 @@ df %>%
   ggplot(aes(x = ft, y = mean)) +
   geom_point(shape = 15, size = 3) +
   geom_errorbar(aes(ymin = mean - SE, ymax = mean + SE), width = 0.2) +
-  labs(title = "P. cinereus abundance by forest type",
-       x = "Forest type",
-       y = "Mean abundance per cover board") +
-  scale_x_discrete(labels = c("Mixed deciduous", "Hemlock")) +
-  theme_classic()
+  labs(title = "",
+       x = "",
+       y = "Mean abundance") +
+  theme_classic() +
+  annotate("text", x = 0.8, y = 0.9, label = "P = 0.982")
+
+errbar1
 ```
 
-  ggplot(aes(x = ft, y = mean_n)) +
-  geom_errorbar(ymin = mean_n - sd_n, ymax = mean_n + sd_n, width = 3)
+```{r}
+main.plot <- violin1
+
+inset.plot <- errbar1
+
+plot.with.inset <-
+  ggdraw() +
+  draw_plot(main.plot) +
+  draw_plot(inset.plot, x = .65, y = .65, width = .4, height = .4)
+
+plot.with.inset
 ```
 
+Interesting that the higher outliers in the hemlock group make the mean higher for that group, while the medians of the two groups are the same.  Is median a good summary statistic when it is equal to zero?
 
-
+Wilcoxon test for difference given the extreme skew.
+```{r}
+wilcox.test(df$n_pc ~ df$ft)
+```
+Report: I found no significant difference in mean abundance per cover board between mixed deciduous and hemlock forests (Wilcoxon rank sum test, W = 1198, P = 0.982).
 
 
 ### Modeling
