@@ -55,6 +55,8 @@ Still getting 241 detections of P. cinereus, but when grouping by `plot` and `as
 ```{r join-aco_abund-plots}
 df <- left_join(aco_abund, plots)
 df
+
+write_csv(df, "/cloud/project/data/df.csv")
 ```
 ```{r glimpse-df}
 glimpse(df)
@@ -75,6 +77,12 @@ df %>%
 ```
 
 #### Forest type comparisons
+```{r}
+df %>%
+  group_by(ft) %>%
+  
+```
+
 ```{r plot-violin1}
 violin1 <- df %>%
   ggplot(aes(x = ft, y = n_ind, fill = ft)) +
@@ -244,9 +252,6 @@ p9 <- ggplot(df, aes(x = soil.ph, y = n_ind)) +
 
 grid.arrange(p1, p2, p3, p4, p5, p6, p7, p8, p9, top = textGrob("Relationships between P. cinereus abundance and predictors"))
 ```
-#### Step-wise AIC
-
-
 
 #### Hurdle model without interaction
 
@@ -273,102 +278,30 @@ summary(hurdle_nb3)
 stepAIC(hurdle_nb3, direction = "both")
 ```
 
+
+#### Hurdle model with multiple interaction
+```{r}
+hurdle_nb4 <- hurdle(n_ind ~ ft + ts + ba + st.ha + canopy.cover + cwd.con + vcwd.con + avg.dc + tot.snags + avg.snag.dbh + soil.ph + ft*ts + ts*ba + ts*soil.ph + ft*ba + ft*soil.ph + cwd.con * vcwd.con + st.ha * canopy.cover, data = df1, dist = "negbin")
+summary(hurdle_nb4)
+```
+```{r}
+stepAIC(hurdle_nb4, direction = "both")
+```
+
 ```{r}
 library(AICcmodavg)
-models <- list(hurdle_nb1, hurdle_nb2, hurdle_nb3)
-mod.names <- c('Env model full', 'Env model reduced', 'Env model ft interaction')
-aictab(cand.set = models, modnames = mod.names)
+models <- list(hurdle_nb1, hurdle_nb2, hurdle_nb3, hurdle_nb4)
+mod.names <- c('Env model full', 'Final model', 'Env model ft interaction', 'Env model mult interactions')
+aic_table <- aictab(cand.set = models, modnames = mod.names)
+aic_table
 ```
 
 ```{r}
-nb1 <- glm.nb(n_ind ~ canopy.cover, data = df)
-summary(nb1)
-pred.plot(nb1, xpred = "canopy.cover") +
-  labs(x = "Volume CWD (m2/ha)",
-       y = "P. cinereus abundance per cover board")
-```
-
-
-#### Environmental Model with no interaction effects (negative binomial)
-```{r}
-nb_env <- glm.nb(n_ind ~ ft + ts + ba + st.ha + canopy.cover + cwd.con + vcwd.con + avg.dc + soil.ph + airt + rh + soilt, data = df_pc)
-summary(nb_env)
-```
-#### Environmental model with forest type interaction (negative binomial)
-
-```{r}
-nb_env_effect1 <- glm.nb(n_ind ~ ft * ts * ba * vcwd.con * cwd.con * st.ha + canopy.cover + cwd.con + vcwd.con + avg.dc + soil.ph + airt + rh + soilt, data = df_pc)
-summary(nb_env_effect1)
-```
-
-#### Hurdle model
-```{r}
-#install.packages("pscl")
-library(pscl)
-
-nb_hurdle1 <- hurdle(n_ind ~ ft + ts + ba + st.ha + canopy.cover + cwd.con + vcwd.con + avg.dc + soil.ph + airt + rh + soilt, data = df_pc, dist = "negbin")
-summary(nb_hurdle1)
-```
-
-#### Compare AIC
-```{r}
-library(AICcmodavg)
-models <- list(nb_env, nb_env_effect1)
-mod.names <- c('Environmental model NB', 'Environmental model with interaction NB')
-aictab(cand.set = models, modnames = mod.names)
-```
-
-```{r}
-models <- list(nb_hurdle1)
-mod.names <- c('Environmental model Hurdle NB')
-aictab(cand.set = models, modnames = mod.names)
-```
-Interesting, lowest AIC is the environmental model with forest type interaction effects, negative binomial (without hurdle).  The hurdle model has a Delta AIC of 239.67.  Hurdle model simply being penalized more for the hurdle component?  Not an appropriate comparison using AIC?
-
-
-#### Are P. cinereus more abundant in hemlock or mixed deciduous forests?
-```{r}
-df_pc %>%
-  ggplot(aes(x = ft, y = n_ind, fill = ft)) +
-  geom_violin() +
-  theme_classic() +
-  scale_x_discrete(labels = c("Mixed deciduous", "Hemlock")) +
-  labs(x = "Forest type",
-       y = "P. cinereus counts") +
-  theme(legend.position = "none")
-```
-Wilcoxon-signed rank test since response variable is not normally distributed.
-```{r}
-wilcox.test(df_pc$n_ind ~ df_pc$ft)
-```
-Mean P. cinereus  is significantly higher in hemlock-dominated stands than in mixed-deciduous stands (Wilcoxon rank sum test, W = 1676, P = <0.001).
-
-```{r}
-df_pc %>%
-  ggplot(aes(x = ts, y = n_ind)) +
-  geom_jitter(alpha = 0.25) +
-  geom_smooth(method = "lm")
-```
-Simple linear model is not a good fit, so we'll also try this with a negative binomial regression.
-
-```{r}
-nb1 <- glm.nb(n_ind ~ ts, data = df_pc)
-summary(nb1)
-pred.plot(nb1, xpred = "ts") +
-  labs(x = "Percent hemlock basal area (m2/ha)",
-       y = "P. cinereus count")
+#install.packages("knitr")
+library(knitr)
 ```
 ```{r}
-glance(nb1)
-```
-
-
-```{r}
-nb_cwd <- glm.nb(n_ind ~ vcwd.con, data = df_pc)
-summary(nb_cwd)
-pred.plot(nb_cwd, xpred = "vcwd.con") +
-  labs(x = "CWD volume in contact with ground",
-       y = "P. cinereus count")
+kable(aic_table, col.names = c('Model', 'K', 'AIC', 'Delta AIC', 'Model Lik', 'AIC Wt', 'LL', 'Cum Wt'))
 ```
 
 
