@@ -77,11 +77,7 @@ df %>%
 ```
 
 #### Forest type comparisons
-```{r}
-df %>%
-  group_by(ft) %>%
-  
-```
+
 
 ```{r plot-violin1}
 violin1 <- df %>%
@@ -151,8 +147,8 @@ df %>%
   geom_point(shape = 15, size = 3) +
   geom_errorbar(aes(ymin = mean - SE, ymax = mean + SE), width = 0.2) +
   labs(title = "",
-       x = "",
-       y = "Mean ") +
+       x = "Site",
+       y = "Mean abundance per cover board") +
   theme_bw()
 ```
 
@@ -250,7 +246,7 @@ p9 <- ggplot(df, aes(x = soil.ph, y = n_ind)) +
   labs(x = "Soil pH",
        y = "")
 
-grid.arrange(p1, p2, p3, p4, p5, p6, p7, p8, p9, top = textGrob("Relationships between P. cinereus abundance and predictors"))
+grid.arrange(p1, p2, p3, p4, p5, p6, p7, p8, p9, top = grid::textGrob("Relationships between P. cinereus abundance and predictors"))
 ```
 
 #### Hurdle model without interaction
@@ -278,6 +274,49 @@ summary(hurdle_nb3)
 stepAIC(hurdle_nb3, direction = "both")
 ```
 
+```{r}
+plot_nb3_hurdle <- df %>%
+  mutate(presence = case_when(n_ind >= 1 ~ 1, n_ind == 0 ~ 0)) %>%
+  ggplot(aes(x = canopy.cover, y = presence)) +
+  geom_jitter(height = 0.02, alpha = 0.25) +
+  geom_smooth(method = "glm", method.args = list(family="binomial"), se = TRUE, fullrange = TRUE) +
+  xlim(60,120) +
+  theme_bw() +
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank()) +
+  labs(x = "",
+       y = "")
+
+plot_nb3_hurdle
+```
+```{r}
+plot_nb3_count <- df %>%
+  filter(n_ind > 0) %>%
+  ggplot(aes(x = canopy.cover, y = n_ind)) +
+  geom_jitter(alpha = 0.5) +
+  stat_smooth(method = MASS::glm.nb, se = TRUE, fullrange = TRUE) +
+  xlim(70,100) +
+  theme_bw() +
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank()) +
+  labs(x = "Percent canopy cover",
+       y = "Abundance per cover board")
+
+plot_nb3_count
+```
+
+```{r}
+main.plot <- plot_nb3_count
+
+inset.plot <- plot_nb3_hurdle
+
+hurdle_plot <-
+  ggdraw() +
+  draw_plot(main.plot) +
+  draw_plot(inset.plot, x = 0.055, y = .58, width = .4, height = .4)
+
+hurdle_plot
+```
 
 #### Hurdle model with multiple interaction
 ```{r}
@@ -303,6 +342,8 @@ library(knitr)
 ```{r}
 kable(aic_table, col.names = c('Model', 'K', 'AIC', 'Delta AIC', 'Model Lik', 'AIC Wt', 'LL', 'Cum Wt'))
 ```
+
+# Consider chi-squared test for absolute counts.
 
 
 ## P. cinereus Morphometrics
