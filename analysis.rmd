@@ -1,5 +1,5 @@
 ---
-title: "Red-backed salamander abundance and distribution in north-central Massachusetts"
+title: "Red-backed salamander  and distribution in north-central Massachusetts"
 author: "Joshua A. Harkness"
 date: "2024-02-13"
 output: github_document
@@ -35,8 +35,8 @@ aco <- read_csv("/cloud/project/data/hf131-04-aco.csv")
 pc <- read_csv("/cloud/project/data/hf131-05-pc-abund.csv")
 herps <- read_csv("/cloud/project/data/hf131-06-herps.csv")
 ```
-## P. cinereus abundance
-### Calculate abundance per cover board
+## P. cinereus 
+### Calculate  per cover board
 
 ```{r select-vars-aco}
 aco <- aco %>%
@@ -46,7 +46,7 @@ aco <- aco %>%
 ```{r calc-abund-aco}
 aco_abund <- aco %>%
   group_by(plot, asn, aco) %>%
-  summarize(n_pc = sum(pca), .groups = "keep")
+  summarize(n_ind = sum(pca), .groups = "keep")
 
 aco_abund
 ```
@@ -58,20 +58,30 @@ df
 ```
 ```{r glimpse-df}
 glimpse(df)
-sum(df$n_pc)
+sum(df$n_ind)
 ```
 Now 310 cover board observations, still with 241 P. cinereus detections.
-```{r check-unique-n_pc-vals}
-unique(df$n_pc)
+```{r check-unique-n_ind-vals}
+unique(df$n_ind)
 ```
 
+```{r}
+df %>%
+  ggplot(aes(x = n_ind)) +
+  geom_bar(fill = "seagreen4", color = "black") +
+  labs(title = "P. cinereus abundance distribution",
+       x = "Abundance per cover board",
+       y = "Count")
+```
+
+#### Forest type comparisons
 ```{r plot-violin1}
 violin1 <- df %>%
-  ggplot(aes(x = ft, y = n_pc, fill = ft)) +
+  ggplot(aes(x = ft, y = n_ind, fill = ft)) +
   geom_violin() +
-  labs(title = "P. cinereus abundance by forest type",
+  labs(title = "P. cinereus  by forest type",
        x = "Forest type",
-       y = "Abundance per cover board") +
+       y = " per cover board") +
   theme_classic() +
   theme(legend.position = "none") +
   scale_x_discrete(labels = c("Mixed deciduous", "Hemlock")) +
@@ -84,16 +94,16 @@ violin1
 ```{r plot-errbar1}
 errbar1 <- df %>%
   group_by(ft) %>%
-  summarise(mean = mean(n_pc),
-            sd = sd(n_pc),
+  summarise(mean = mean(n_ind),
+            sd = sd(n_ind),
             n = n(),
-            SE = sd(n_pc) / sqrt(n())) %>%
+            SE = sd(n_ind) / sqrt(n())) %>%
   ggplot(aes(x = ft, y = mean)) +
   geom_point(shape = 15, size = 3) +
   geom_errorbar(aes(ymin = mean - SE, ymax = mean + SE), width = 0.2) +
   labs(title = "",
        x = "",
-       y = "Mean abundance") +
+       y = "Mean ") +
   theme_classic() +
   annotate("text", x = 0.8, y = 0.9, label = "P = 0.982")
 
@@ -116,14 +126,168 @@ plot.with.inset
 Interesting that the higher outliers in the hemlock group make the mean higher for that group, while the medians of the two groups are the same.  Is median a good summary statistic when it is equal to zero?
 
 Wilcoxon test for difference given the extreme skew.
-```{r test-wilcox-n_pc-df}
-wilcox.test(df$n_pc ~ df$ft)
+```{r test-wilcox-n_ind-df}
+wilcox.test(df$n_ind ~ df$ft)
 ```
-Report: I found no significant difference in mean abundance per cover board between mixed deciduous and hemlock forests (Wilcoxon rank sum test, W = 1198, P = 0.982).
+Report: I found no significant difference in mean  per cover board between mixed deciduous and hemlock forests (Wilcoxon rank sum test, W = 1198, P = 0.982).
 
+#### Site comparisons
+```{r}
+df %>%
+  group_by(site) %>%
+  summarise(mean = mean(n_ind),
+            sd = sd(n_ind),
+            n = n(),
+            SE = sd(n_ind) / sqrt(n())) %>%
+  ggplot(aes(x = site, y = mean)) +
+  geom_point(shape = 15, size = 3) +
+  geom_errorbar(aes(ymin = mean - SE, ymax = mean + SE), width = 0.2) +
+  labs(title = "",
+       x = "",
+       y = "Mean ") +
+  theme_bw()
+```
+
+```{r}
+kw1 = kruskal.test(df$n_ind ~ df$site)
+kw1
+```
+Significant, so we will use a Dunn's post hoc test.
+
+```{r}
+library(dunn.test)
+
+dunn.test(df$n_ind, df$site)
+```
+
+Add report, not sure if this will go into presentation, but it is worth knowing differences between sites here.
 
 ### Modeling
-Using negative binomial framework here as it provided the lowest AICs in model testing, given highly skewed count data with variance not equal to mean.  Quasi-Poisson may also be applicable here.
+#### Assess normality
+```{r}
+p1 <- ggplot(df, aes(x = ba)) +
+  geom_histogram(fill = "skyblue", color = "black") +
+  labs(x = "Basal area (m2/ha)",
+       y = "")
+p2 <- ggplot(df, aes(x = st.ha)) +
+  geom_histogram(fill = "skyblue", color = "black") +
+  labs(x = "Stems/ha",
+       y = "")
+p3 <- ggplot(df, aes(x = ts)) +
+  geom_histogram(fill = "skyblue", color = "black") +
+  labs(x = "Percent hemlock",
+       y = "Count")
+p4 <- ggplot(df, aes(x = canopy.cover)) +
+  geom_histogram(fill = "skyblue", color = "black") +
+  labs(x = "Percent canopy cover",
+       y = "")
+p5 <- ggplot(df, aes(x = vcwd.con)) +
+  geom_histogram(fill = "skyblue", color = "black") +
+  labs(x = "Volume CWD (m3)",
+       y = "")
+p6 <- ggplot(df, aes(x = soil.ph)) +
+  geom_histogram(fill = "skyblue", color = "black") +
+  labs(x = "Soil pH",
+       y = "")
+
+grid.arrange(p1, p2, p3, p4, p5, p6)
+```
+
+
+#### Assess relationships
+```{r plot-relationships, message = FALSE, warning = FALSE}
+p1 <- ggplot(df, aes(x = ba, y = n_ind)) +
+  geom_jitter(alpha = 0.25) +
+  geom_smooth(method = "lm") +
+  labs(x = "Basal area (m2/ha)",
+       y = "")
+p2 <- ggplot(df, aes(x = st.ha, y = n_ind)) +
+  geom_jitter(alpha = 0.25) +
+  geom_smooth(method = "lm") +
+  labs(x = "Stems/ha",
+       y = "")
+p3 <- ggplot(df, aes(x = ts, y = n_ind)) +
+  geom_jitter(alpha = 0.25) +
+  geom_smooth(method = "lm") +
+  labs(x = "Percent hemlock",
+       y = "")
+p4 <- ggplot(df, aes(x = canopy.cover, y = n_ind)) +
+  geom_jitter(alpha = 0.25) +
+  geom_smooth(method = "lm") +
+  labs(x = "Percent canopy cover",
+       y = "Abundance per cover board")
+p5 <- ggplot(df, aes(x = cwd.con, y = n_ind)) +
+  geom_jitter(alpha = 0.25) +
+  geom_smooth(method = "lm") +
+  labs(x = "Number CWD pieces contact",
+       y = "")
+p6 <- ggplot(df, aes(x = vcwd.con, y = n_ind)) +
+  geom_jitter(alpha = 0.25) +
+  geom_smooth(method = "lm") +
+  labs(x = "Volume CWD contact",
+       y = "")
+p7 <- ggplot(df, aes(x = avg.dc, y = n_ind)) +
+  geom_jitter(alpha = 0.25) +
+  geom_smooth(method = "lm") +
+  labs(x = "Average decay class",
+       y = "")
+p8 <- ggplot(df, aes(x = tot.snags, y = n_ind)) +
+  geom_jitter(alpha = 0.25) +
+  geom_smooth(method = "lm") +
+  labs(x = "Total snags",
+       y = "")
+p9 <- ggplot(df, aes(x = soil.ph, y = n_ind)) +
+  geom_jitter(alpha = 0.25) +
+  geom_smooth(method = "lm") +
+  labs(x = "Soil pH",
+       y = "")
+
+grid.arrange(p1, p2, p3, p4, p5, p6, p7, p8, p9, top = textGrob("Relationships between P. cinereus abundance and predictors"))
+```
+#### Step-wise AIC
+
+
+
+#### Hurdle model without interaction
+
+```{r}
+df1 <- na.omit(df)
+hurdle_nb1 <- hurdle(n_ind ~ ft + ts + ba + st.ha + canopy.cover + cwd.con + vcwd.con + avg.dc + tot.snags + avg.snag.dbh + soil.ph, data = df1, dist = "negbin")
+summary(hurdle_nb1)
+```
+
+
+```{r}
+stepAIC(hurdle_nb1, direction = "both")
+```
+```{r}
+hurdle_nb2 <- hurdle(n_ind ~ canopy.cover + avg.snag.dbh, data = df1, dist = "negbin")
+summary(hurdle_nb2)
+```
+#### Hurdle model with forest type interaction
+```{r}
+hurdle_nb3 <- hurdle(n_ind ~ ft + ts + ba + st.ha + canopy.cover + cwd.con + vcwd.con + avg.dc + tot.snags + avg.snag.dbh + soil.ph + ft*ts + ts*ba + ts*soil.ph + ft*ba + ft*soil.ph, data = df1, dist = "negbin")
+summary(hurdle_nb3)
+```
+```{r}
+stepAIC(hurdle_nb3, direction = "both")
+```
+
+```{r}
+library(AICcmodavg)
+models <- list(hurdle_nb1, hurdle_nb2, hurdle_nb3)
+mod.names <- c('Env model full', 'Env model reduced', 'Env model ft interaction')
+aictab(cand.set = models, modnames = mod.names)
+```
+
+```{r}
+nb1 <- glm.nb(n_ind ~ canopy.cover, data = df)
+summary(nb1)
+pred.plot(nb1, xpred = "canopy.cover") +
+  labs(x = "Volume CWD (m2/ha)",
+       y = "P. cinereus abundance per cover board")
+```
+
 
 #### Environmental Model with no interaction effects (negative binomial)
 ```{r}
@@ -177,7 +341,7 @@ Wilcoxon-signed rank test since response variable is not normally distributed.
 ```{r}
 wilcox.test(df_pc$n_ind ~ df_pc$ft)
 ```
-Mean P. cinereus abundance is significantly higher in hemlock-dominated stands than in mixed-deciduous stands (Wilcoxon rank sum test, W = 1676, P = <0.001).
+Mean P. cinereus  is significantly higher in hemlock-dominated stands than in mixed-deciduous stands (Wilcoxon rank sum test, W = 1676, P = <0.001).
 
 ```{r}
 df_pc %>%
@@ -609,7 +773,7 @@ richness_list <- list(md_abund, ts_abund)
 ```
 
 ```{r}
-richness <- iNEXT(richness_list, q = 0, datatype="abundance")
+richness <- iNEXT(richness_list, q = 0, datatype="")
 richness
 ```
 ```{r}
