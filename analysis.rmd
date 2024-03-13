@@ -9,7 +9,8 @@ output: github_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-```{r}
+## Load packages
+```{r load-packages}
 #install.packages(gridExtra)
 library(tidyverse)
 library(broom)
@@ -19,6 +20,7 @@ library(ggspatial)
 library(readxl)
 library(GGally)
 library(gridExtra)
+library(grid)
 library(tidymodels)
 library(MASS)
 library(simfit)
@@ -80,7 +82,7 @@ site_map <- ggplot(mass_towns) +
     location = "bl",
     bar_cols = c("grey60", "white"),
     text_family = "ArcherPro Book") +
-  annotate("text", x = c(-71.9, -72.12, -72.27, -72.1, -72.13, -72.08, -72.23, -72.36, -72.37, -72.38), y = c(42.52, 42.44, 42.49, 42.54, 42.61, 42.68, 42.66, 42.7, 42.66, 42.6), label = c("Mount Wachusett", "Slab City", "Tom Swamp", "Prospect Hill", "Millers River", "Beryl Hill", "Warwick SF", "Mount Grace SF", "Northfield SF", "Erving SF"))
+  annotate("text", x = c(-71.9, -72.12, -72.27, -72.1, -72.13, -72.08, -72.23, -72.36, -72.39, -72.38), y = c(42.52, 42.44, 42.49, 42.54, 42.61, 42.68, 42.66, 42.7, 42.66, 42.6), label = c("Mount Wachusett", "Slab City", "Tom Swamp", "Prospect Hill", "Millers River", "Beryl Hill", "Warwick SF", "Mount Grace SF", "Northfield SF", "Erving SF"))
 
 main.plot <- site_map
 
@@ -129,35 +131,30 @@ Now 310 cover board observations, still with 241 P. cinereus detections.
 unique(df$n_ind)
 ```
 
-```{r}
+```{r barplot-abundance-dist}
 df %>%
   ggplot(aes(x = n_ind)) +
   geom_bar(fill = "seagreen4", color = "black") +
   labs(title = "P. cinereus abundance distribution",
        x = "Abundance per cover board",
        y = "Count")
+
+ggsave("abundance_dist.png")
 ```
 
 #### Forest type comparisons
-
-
 ```{r plot-violin1}
 violin1 <- df %>%
   ggplot(aes(x = ft, y = n_ind, fill = ft)) +
   geom_violin() +
-  labs(title = "P. cinereus  by forest type",
+  labs(title = "P. cinereus by forest type",
        x = "Forest type",
-       y = " per cover board") +
+       y = "Abundance per cover board") +
   theme_classic() +
   theme(legend.position = "none") +
   scale_x_discrete(labels = c("Mixed deciduous", "Hemlock")) +
   ylim(0,9)
 
-violin1
-```
-
-
-```{r plot-errbar1}
 errbar1 <- df %>%
   group_by(ft) %>%
   summarise(mean = mean(n_ind),
@@ -173,10 +170,6 @@ errbar1 <- df %>%
   theme_classic() +
   annotate("text", x = 0.8, y = 0.9, label = "P = 0.982")
 
-errbar1
-```
-
-```{r plot-inset1}
 main.plot <- violin1
 
 inset.plot <- errbar1
@@ -187,6 +180,8 @@ plot.with.inset <-
   draw_plot(inset.plot, x = .65, y = .65, width = .4, height = .4)
 
 plot.with.inset
+
+ggsave("abundance_comp_ft.png")
 ```
 
 Interesting that the higher outliers in the hemlock group make the mean higher for that group, while the medians of the two groups are the same.  Is median a good summary statistic when it is equal to zero?
@@ -198,7 +193,7 @@ wilcox.test(df$n_ind ~ df$ft)
 Report: I found no significant difference in mean  per cover board between mixed deciduous and hemlock forests (Wilcoxon rank sum test, W = 1198, P = 0.982).
 
 #### Site comparisons
-```{r}
+```{r plot-errorbar-mean-abundance-site}
 df %>%
   group_by(site) %>%
   summarise(mean = mean(n_ind),
@@ -208,19 +203,21 @@ df %>%
   ggplot(aes(x = site, y = mean)) +
   geom_point(shape = 15, size = 3) +
   geom_errorbar(aes(ymin = mean - SE, ymax = mean + SE), width = 0.2) +
-  labs(title = "",
+  labs(title = "P. cinereus abundance by site",
        x = "Site",
        y = "Mean abundance per cover board") +
   theme_bw()
+
+ggsave("mean_site_abundance_comp.png")
 ```
 
-```{r}
+```{r test-kw1}
 kw1 = kruskal.test(df$n_ind ~ df$site)
 kw1
 ```
 Significant, so we will use a Dunn's post hoc test.
 
-```{r}
+```{r test-dunn1}
 library(dunn.test)
 
 dunn.test(df$n_ind, df$site)
@@ -230,7 +227,7 @@ Add report, not sure if this will go into presentation, but it is worth knowing 
 
 ### Modeling
 #### Assess normality
-```{r}
+```{r hist-some-predictors}
 p1 <- ggplot(df, aes(x = ba)) +
   geom_histogram(fill = "skyblue", color = "black") +
   labs(x = "Basal area (m2/ha)",
@@ -257,6 +254,8 @@ p6 <- ggplot(df, aes(x = soil.ph)) +
        y = "")
 
 grid.arrange(p1, p2, p3, p4, p5, p6)
+
+ggsave("hist_some_predictors.png")
 ```
 
 
@@ -309,35 +308,41 @@ p9 <- ggplot(df, aes(x = soil.ph, y = n_ind)) +
        y = "")
 
 grid.arrange(p1, p2, p3, p4, p5, p6, p7, p8, p9, top = grid::textGrob("Relationships between P. cinereus abundance and predictors"))
+
+ggsave("scatterplots_abundance_predictors.png")
 ```
 
 #### Hurdle model without interaction
 
-```{r}
+```{r hurdle-nb1}
 df1 <- na.omit(df)
 hurdle_nb1 <- hurdle(n_ind ~ ft + ts + ba + st.ha + canopy.cover + cwd.con + vcwd.con + avg.dc + tot.snags + avg.snag.dbh + soil.ph, data = df1, dist = "negbin")
 summary(hurdle_nb1)
 ```
 
 
-```{r}
+```{r stepwise-aic-hurdle-nb1}
 stepAIC(hurdle_nb1, direction = "both")
 ```
-```{r}
+
+```{r hurdle-nb2}
 hurdle_nb2 <- hurdle(n_ind ~ canopy.cover + avg.snag.dbh, data = df1, dist = "negbin")
 summary(hurdle_nb2)
 ```
+
 #### Hurdle model with forest type interaction
-```{r}
+```{r hurdle-nb3}
 hurdle_nb3 <- hurdle(n_ind ~ ft + ts + ba + st.ha + canopy.cover + cwd.con + vcwd.con + avg.dc + tot.snags + avg.snag.dbh + soil.ph + ft*ts + ts*ba + ts*soil.ph + ft*ba + ft*soil.ph, data = df1, dist = "negbin")
 summary(hurdle_nb3)
 ```
-```{r}
+
+```{r stepwise-aic-hurdle-nb3}
 stepAIC(hurdle_nb3, direction = "both")
 ```
+`n_ind` ~ `canopy.cover` + `avg.snag.dbh` still gives the lowest AIC -- this will be our final model.
 
-```{r}
-plot_nb3_hurdle <- df %>%
+```{r plot-nb2-hurdle-partial}
+plot_nb2_hurdle <- df %>%
   mutate(presence = case_when(n_ind >= 1 ~ 1, n_ind == 0 ~ 0)) %>%
   ggplot(aes(x = canopy.cover, y = presence)) +
   geom_jitter(height = 0.02, alpha = 0.25) +
@@ -349,10 +354,7 @@ plot_nb3_hurdle <- df %>%
   labs(x = "",
        y = "")
 
-plot_nb3_hurdle
-```
-```{r}
-plot_nb3_count <- df %>%
+plot_nb2_count <- df %>%
   filter(n_ind > 0) %>%
   ggplot(aes(x = canopy.cover, y = n_ind)) +
   geom_jitter(alpha = 0.5) +
@@ -364,13 +366,9 @@ plot_nb3_count <- df %>%
   labs(x = "Percent canopy cover",
        y = "Abundance per cover board")
 
-plot_nb3_count
-```
+main.plot <- plot_nb2_count
 
-```{r}
-main.plot <- plot_nb3_count
-
-inset.plot <- plot_nb3_hurdle
+inset.plot <- plot_nb2_hurdle
 
 hurdle_plot <-
   ggdraw() +
@@ -378,18 +376,21 @@ hurdle_plot <-
   draw_plot(inset.plot, x = 0.055, y = .58, width = .4, height = .4)
 
 hurdle_plot
+
+ggsave("hurdle_nb2_plot.png")
 ```
 
-#### Hurdle model with multiple interaction
-```{r}
+#### Hurdle model with multiple interactions
+```{r hurdle-nb4}
 hurdle_nb4 <- hurdle(n_ind ~ ft + ts + ba + st.ha + canopy.cover + cwd.con + vcwd.con + avg.dc + tot.snags + avg.snag.dbh + soil.ph + ft*ts + ts*ba + ts*soil.ph + ft*ba + ft*soil.ph + cwd.con * vcwd.con + st.ha * canopy.cover, data = df1, dist = "negbin")
 summary(hurdle_nb4)
 ```
-```{r}
+```{r stepwise-aic-hurdle-nb4}
 stepAIC(hurdle_nb4, direction = "both")
 ```
+Adding additional interaction terms does not improve the model.
 
-```{r}
+```{r aic-comp-models}
 library(AICcmodavg)
 models <- list(hurdle_nb1, hurdle_nb2, hurdle_nb3, hurdle_nb4)
 mod.names <- c('Env model full', 'Final model', 'Env model ft interaction', 'Env model mult interactions')
@@ -397,7 +398,7 @@ aic_table <- aictab(cand.set = models, modnames = mod.names)
 aic_table
 ```
 
-```{r}
+```{r table-aic-comp}
 #install.packages("knitr")
 library(knitr)
 ```
@@ -405,25 +406,30 @@ library(knitr)
 kable(aic_table, col.names = c('Model', 'K', 'AIC', 'Delta AIC', 'Model Lik', 'AIC Wt', 'LL', 'Cum Wt'))
 ```
 
-# Consider chi-squared test for absolute counts.
-
-
 ## P. cinereus Morphometrics
+First need to add forest type to the `pc` dataframe so that morphometrics are associated with different sites.  I don't need to join dataframes here, since I can simply extract the forest type information from the `plot` variable.  Note that there are 250 observations in the `pc` datafile, while there are only 241 detections of P. cinereus in the `aco` dataframe that I have used so far in this analysis.  I could not determine the source of this issue, so I'm chosing simply to analyize them separately.
 
-```{r}
-wt_plot <- df_pc %>%
+```{r add-ft-var-pc}
+pc <- pc %>%
+  mutate(ft = str_extract(plot, "(?<=.)TS|MD"))
+
+pc
+```
+
+#### By sex
+```{r morpho-density-by-sex}
+wt_plot <- pc %>%
   drop_na(sex) %>%
   ggplot(aes(x = wt, fill = sex)) +
   geom_density(alpha = 0.5) +
-  labs(title = "P. cinereus morphometrics by sex",
-       x = "Weight (cg)",
+  labs(x = "Weight (cg)",
        y = "",
        fill = "Sex") +
-  theme(legend.position = c(0.96, 0.85)) +
+  theme(legend.position = c(0.96, 0.8)) +
   theme(legend.title = element_blank()) +
   scale_fill_viridis_d()
 
-tl_plot <- df_pc %>%
+tl_plot <- pc %>%
   drop_na(sex) %>%
   ggplot(aes(x = tl, fill = sex)) +
   geom_density(alpha = 0.5) +
@@ -432,7 +438,7 @@ tl_plot <- df_pc %>%
   theme(legend.position = "none") +
   scale_fill_viridis_d()
 
-svl_plot <- df_pc %>%
+svl_plot <- pc %>%
   drop_na(sex) %>%
   ggplot(aes(x = svl, fill = sex)) +
   geom_density(alpha = 0.5) +
@@ -441,27 +447,40 @@ svl_plot <- df_pc %>%
   theme(legend.position = "none")  +
   scale_fill_viridis_d()
 
-grid.arrange(wt_plot, tl_plot, svl_plot)
+grid.arrange(wt_plot, tl_plot, svl_plot, top = textGrob("P. cinereus morphometrics by sex"))
 
-#  ggpairs(aes(color = sex), columns = c("wt", "tl", "svl"))
+ggsave("morpho_density_by_sex.png")
 ```
 
 Density distributions for Plethodon cinereus weight (in centigrams), total and snout-vent length (in millimeters).  Females appear to be somewhat heavier and longer than males.  Observations with missing values removed.  Skew in total length but not snout-vent length may be due to salamanders with missing/regenerating tails.
 
+These morphometric variables are normally distributed, so we can use t-tests.
+
+```{r t-test-wt-sex}
+t.test(wt ~ sex, data = pc)
+```
+```{r t-test-tl-sex}
+t.test(tl ~ sex, data = pc)
+```
+```{r t-test-svl-sex}
+t.test(svl ~ sex, data = pc)
+```
+Female P. cinereus were significantly heavier than males (T(129.95) = 2.35, P = 0.02).  Females were also significantly longer than males, both in total length (T(122.62) = 2.17, P = 0.032), and snout-vent length (T(114.74) = 2.38, P = 0.019).
+
 ```{r boxplot-morpho-sex}
-box1 <- df_pc %>%
+box1 <- pc %>%
   drop_na(sex) %>%
   ggplot(aes(x = sex, y = wt, fill = sex)) +
   geom_boxplot() +
   geom_jitter(width = 0.1, alpha = 0.1) +
   labs(x = "",
        y = "Weight (cg)") +
-  scale_fill_manual(values = c("darkseagreen2", "lavender")) +
+  scale_fill_manual(values = c("wheat", "lavender")) +
   theme_bw() +
   theme(legend.position = "none") +
-  annotate("text", x = 2.1, y = 162, label = "P < 0.001")
+  annotate("text", x = 2.1, y = 162, label = "P = 0.02")
 
-box2 <- df_pc %>%
+box2 <- pc %>%
   drop_na(sex) %>%
   ggplot(aes(x = sex, y = tl, fill = sex)) +
   geom_boxplot() +
@@ -471,9 +490,9 @@ box2 <- df_pc %>%
   scale_fill_manual(values = c("wheat", "lavender")) +
   theme_bw() +
   theme(legend.position = "none") +
-  annotate("text", x = 2.1, y = 99, label = "P < 0.001")
+  annotate("text", x = 2.1, y = 99, label = "P = 0.032")
 
-box3 <- df_pc %>%
+box3 <- pc %>%
   drop_na(sex) %>%
   ggplot(aes(x = sex, y = svl, fill = sex)) +
   geom_boxplot() +
@@ -483,30 +502,28 @@ box3 <- df_pc %>%
   scale_fill_manual(values = c("wheat", "lavender")) +
   theme_bw() +
   theme(legend.position = "none") +
-  annotate("text", x = 2.1, y = 56, label = "P < 0.001")
+  annotate("text", x = 2.1, y = 56, label = "P = 0.019")
 
 grid.arrange(box1, box2, box3, ncol = 3, top = textGrob("P. cinereus morphometrics by sex"), bottom = textGrob("Sex"))
-```
 
-Normally distributed, so we can use a T-test or simple linear model.
-
-T-test first:
-```{r}
-t.test(wt ~ sex, data = df_pc)
+ggsave("boxplot_morpho_by_sex.png")
 ```
-
-I will also run T-tests for total length and snout-vent length as a function of sex.
-```{r}
-t.test(tl ~ sex, data = df_pc)
-```
-```{r}
-t.test(svl ~ sex, data = df_pc)
-```
-Female P. cinereus are significantly heavier than males; total length and snout-vent length were also significantly longer in females than males.
 
 #### By forest type
+```{r t-test-wt-ft}
+t.test(wt ~ ft, data = pc)
+```
+```{r t-test-tl-ft}
+t.test(tl ~ ft, data = pc)
+```
+
+```{r t-test-svl-ft}
+t.test(svl ~ ft, data = pc)
+```
+Report: P. cinereus are significantly heavier (T(205.86) = -1.7457, P = 0.082), and longer, both in total length (T(203.25) = -2.32, P = 0.022) and snout-vent length (T(198.56) = -2.13, P = 0.035), in hemlock-dominated forests than in mixed deciduous forests.  Variability in weight was greater in mixed deciduous forests.
+
 ```{r boxplot-morpho-ft, warning = FALSE}
-box1 <- df_pc %>%
+box1 <- pc %>%
   ggplot(aes(x = ft, y = wt, fill = ft)) +
   geom_boxplot() +
   geom_jitter(width = 0.1, alpha = 0.1) +
@@ -514,9 +531,9 @@ box1 <- df_pc %>%
        y = "Weight (cg)") +
   theme_bw() +
   theme(legend.position = "none") +
-  annotate("text", x = 2.1, y = 162, label = "P = 0.069")
+  annotate("text", x = 2.1, y = 162, label = "P = 0.082")
 
-box2 <- df_pc %>%
+box2 <- pc %>%
   ggplot(aes(x = ft, y = tl, fill = ft)) +
   geom_boxplot() +
   geom_jitter(width = 0.1, alpha = 0.1) +
@@ -524,9 +541,9 @@ box2 <- df_pc %>%
        y = "Total length (mm)") +
   theme_bw() +
   theme(legend.position = "none") +
-  annotate("text", x = 2.1, y = 99, label = "P = 0.089")
+  annotate("text", x = 2.1, y = 99, label = "P = 0.022")
 
-box3 <- df_pc %>%
+box3 <- pc %>%
   ggplot(aes(x = ft, y = svl, fill = ft)) +
   geom_boxplot() +
   geom_jitter(width = 0.1, alpha = 0.1) +
@@ -534,80 +551,24 @@ box3 <- df_pc %>%
        y = "Snout-vent length (mm)") +
   theme_bw() +
   theme(legend.position = "none") +
-  annotate("text", x = 2.1, y = 56, label = "P = 0.398")
+  annotate("text", x = 2.1, y = 56, label = "P = 0.035")
 
 grid.arrange(box1, box2, box3, ncol = 3, top = textGrob("P. cinereus morphometrics by forest type"), bottom = textGrob("Forest type"))
+
+ggsave("boxplot_morpho_by_ft.png")
 ```
-
-```{r}
-t.test(wt ~ ft, data = df_pc)
-wilcox.test(df_pc$wt ~ df_pc$ft)
-```
-No significant difference in mean weight between mixed deciduous and hemlock-dominated stands.
-
-```{r}
-t.test(tl ~ ft, data = df_pc)
-wilcox.test(df_pc$tl ~ df_pc$ft)
-```
-No significant difference in mean total length between mixed deciduous and hemlock stands.
-
-```{r}
-t.test(svl ~ ft, data = df_pc)
-wilcox.test(df_pc$svl ~ df_pc$ft)
-```
-No significant difference in mean snout-vent length between mixed deciduous and hemlock forests.
-
-We can also model this with the continuous variable `ts` instead of categorical `ft`.
-```{r}
-lm_wt_ts <- linear_reg(engine = "lm") %>%
-  fit(wt ~ ts, data = df_pc)
-
-lm_wt_ts_tidy <- lm_wt_ts %>%
-  tidy()
-
-lm_wt_ts_tidy
-
-glance(lm_wt_ts)
-```
-Not significant with very low R^2.
-
-```{r}
-lm_tl_ts <- linear_reg(engine = "lm") %>%
-  fit(tl ~ ts, data = df_pc)
-
-lm_tl_ts_tidy <- lm_tl_ts %>%
-  tidy()
-
-lm_tl_ts_tidy
-
-glance(lm_tl_ts)
-```
-Significant (P = 0.02), but note very low R^2 (0.0089).
-
-```{r}
-lm_svl_ts <- linear_reg(engine = "lm") %>%
-  fit(svl ~ ts, data = df_pc)
-
-lm_svl_ts_tidy <- lm_svl_ts %>%
-  tidy()
-
-lm_svl_ts_tidy
-
-glance(lm_svl_ts)
-```
-Also significant (P = 0.02), again with very low R^2 (0.0088).
 
 #### Cluster Analysis
 Compare total length, snout-vent length, and weight between sexes of P. cinereus
-```{r}
+```{r load-cluster-packages}
 #install.packages("cluster")
 #install.packages("factoextra")
 library(cluster)
 library(factoextra)
 ```
 
-```{r}
-pc_morpho <- df_pc %>%
+```{r calculate k-means}
+pc_morpho <- pc %>%
   dplyr::select(tl, svl, wt, sex) %>%
   drop_na(sex) %>%
   mutate(across(c(tl, svl, wt), scale)) %>% # Try with and without this line
@@ -626,12 +587,12 @@ k5 <- kmeans(pc_means, centers = 5, nstart = 25)
 ```
 Have to use `dplyr::select` because the `select` function is overwritten by another package.
 
-```{r}
+```{r view-k2}
 k2
 ```
 
 
-```{r}
+```{r plot-k-means}
 p1 <- fviz_cluster(k2, geom = "point", data = pc_means) + ggtitle("k = 2")
 p2 <- fviz_cluster(k3, geom = "point",  data = pc_means) + ggtitle("k = 3")
 p3 <- fviz_cluster(k4, geom = "point",  data = pc_means) + ggtitle("k = 4")
@@ -639,14 +600,16 @@ p4 <- fviz_cluster(k5, geom = "point",  data = pc_means) + ggtitle("k = 5")
 
 
 grid.arrange(p1, p2,  p3, p4, nrow = 2)
-p1
+ggsave("cluster-k-means.png")
 ```
 
-```{r}
+```{r elbow-plot-k-means}
 fviz_nbclust(pc_means, kmeans, method = "wss")
+
+ggsave("elbow-plot-k-means.png")
 ```
 
-```{r}
+```{r compare-k2-sex}
 final <- k2
 
 pc_means %>%
@@ -661,12 +624,14 @@ pc_means %>%
   labs(x = "Sex",
        y = "Count",
        fill = "Cluster")
+
+ggsave("barplot-comp-k2-sex.png")
 ```
 
 Try this by forest type / site.
 
-```{r}
-pc_morpho_ft <- df_pc %>%
+```{r calc-k-means-ft}
+pc_morpho_ft <- pc %>%
   dplyr::select(tl, svl, wt, ft) %>%
   drop_na(ft) %>%
   mutate(across(c(tl, svl, wt), scale)) %>% # Try with and without this line
@@ -684,7 +649,7 @@ k4 <- kmeans(pc_means_ft, centers = 4, nstart = 25)
 k5 <- kmeans(pc_means_ft, centers = 5, nstart = 25)
 ```
 
-```{r}
+```{r plot-k-means-ft}
 p1 <- fviz_cluster(k2, geom = "point", data = pc_means_ft) + ggtitle("k = 2")
 p2 <- fviz_cluster(k3, geom = "point",  data = pc_means_ft) + ggtitle("k = 3")
 p3 <- fviz_cluster(k4, geom = "point",  data = pc_means_ft) + ggtitle("k = 4")
@@ -694,12 +659,13 @@ p4 <- fviz_cluster(k5, geom = "point",  data = pc_means_ft) + ggtitle("k = 5")
 grid.arrange(p1, p2,  p3, p4, nrow = 2)
 ```
 
-```{r}
+```{r elbow-plot-k-means-ft}
 fviz_nbclust(pc_means_ft, kmeans, method = "wss")
+
 ```
 Seems like k = 2 probably is the better fit here.
 
-```{r}
+```{r compare-k2-ft}
 final <- k2
 
 pc_means_ft %>%
@@ -712,9 +678,10 @@ pc_means_ft %>%
   coord_flip() +
   labs(fill = "Cluster")
 ```
+Definitely does not capture forest type well, which makes me wonder what other covariates might account for the clustering -- perhaps something not even in the data?
 
 ## Biodiversity
-```{r}
+```{r load-herps-df}
 herps <- read_csv("/cloud/project/data/hf131-06-herps.csv")
 
 herps <- herps %>%
@@ -723,9 +690,9 @@ herps <- herps %>%
 herps %>%
   count(herp_species)
 ```
-We also have 323 observations of individual P. cinereus we need to add here as well as check to see if there are any instances of multiple individuals of other herps in one observation.  Add PLCI to species with case_when or if_else.
+We also have 241 observations of individual P. cinereus we need to add here as well as check to see if there are any instances of multiple individuals of other herps in one observation.  Add PLCI to species with case_when or if_else.
 
-```{r}
+```{r herps-check-mult-entries}
 herps %>%
   filter(str_detect(osn, ","))
 ```
@@ -733,58 +700,59 @@ No commas in the unique identifiers assigned to other herp species, so we can as
 
 There is no variable for forest type assigned in the `herps` dataframe, so I will assign it based on the the plot code.
 
-```{r}
+```{r herps-add-ft-var}
 herps <- herps %>%
   mutate(ft = str_extract(plot, "(?<=.)TS|MD"))
 
 herps
 ```
 
-I need to duplicate these rows with `pca` > 1 by the conditional value of `pca` so that each row is one individual P. cinereus observation.
+Below I am ungrouping all P. cinereus observations stored in `df$n_ind` and filtering only for values not equal to zero, which gives us a new dataframe which is 241 rows long.  Then I'm adding a new column called `herp_species` which only has one value (PLCI), since all individuals here are P. cinereus.
 
-`uncount` seems to work here.
-
-```{r}
+```{r create-pc-obs-df}
 pc_obs <- df %>%
-  uncount(pca)
+  uncount(n_ind)
 
 pc_obs$herp_species = "PLCI"
 
 pc_obs
 ```
-323 rows all labeled by species (PLCI = Plethodon cinereus).
+241 rows all labeled by species (PLCI = Plethodon cinereus).
 
-```{r}
+```{r join-pc_obs-herps}
 sp <- full_join(pc_obs, herps)
 
-sp <- sp %>%
-  dplyr::select(ft, herp_species)
+#sp <- sp %>%
+#  dplyr::select(ft, herp_species)
+
+# Couldn't get select to work here due to the joining variables in the previous step.
+sp <- sp[c('ft', 'herp_species')]
 sp
 ```
 
-```{r}
+```{r count-herp_species}
 sp %>%
+  group_by(herp_species) %>%
   count(herp_species) %>%
   arrange(desc(n))
 ```
 
-```{r}
+```{r count-herp_species-by-ft}
 sp %>%
   group_by(ft) %>%
   count(herp_species) %>%
   arrange(herp_species)
 ```
-Looks like all amphibian species were detected more frequently in hemlock stands than mixed deciduous; only the two snake species were more frequently detected in mixed deciduous stands.  Since snakes are a separate taxonomic group and are only found in one habitat, they are adding noise to the analysis.  We will remove them for analyzing biodiversity.
+Looks like all amphibian species were detected more frequently in hemlock stands than mixed deciduous; only the two snake species were more frequently detected in mixed deciduous stands.  Since snakes are a separate taxonomic group and are only found in one habitat, we will remove them for analyzing biodiversity.
 
-```{r}
+```{r create-amph-df}
 amph <- sp %>%
   filter(herp_species %in% c("AMMA", "PLCI", "NOVI", "EUBI", "RASY"))
 
 amph
 ```
 
-
-```{r}
+```{r split-amph-by-ft}
 md <- amph %>%
   filter(ft == "MD")
 
@@ -808,16 +776,19 @@ glimpse(ts_abund)
 richness_list <- list(md_abund, ts_abund)
 ```
 
-```{r}
-richness <- iNEXT(richness_list, q = 0, datatype="")
+```{r calc-sp-richness}
+richness <- iNEXT(richness_list, q = 0, datatype = "abundance")
 richness
 ```
-```{r}
+
+```{r plot-rarefaction-sp-richness}
 ggiNEXT(richness, type=1, facet.var = "None", color.var = "Assemblage") +
   scale_color_discrete(name = "None", labels = c("Mixed deciduous", "Hemlock")) +
   scale_shape_discrete(name = "None", labels = c("Mixed deciduous", "Hemlock")) +
   scale_fill_discrete(name = "None", labels = c("Mixed deciduous", "Hemlock")) +
   labs(caption = "Amphibian species only")
+
+ggsave("sp_richness_amph.png")
 ```
 
 Not particularly meaningful due to small sample size and sampling design targeted to detect P. cinereus, but it does suggest that amphibian biodiversity may be higher in hemlock stands.
