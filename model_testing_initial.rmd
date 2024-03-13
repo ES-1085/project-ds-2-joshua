@@ -5,11 +5,13 @@ date: "2024-02-13"
 output: html_document
 ---
 
+This data files includes a lot of exploratory model building and analysis that I didn't end up using in the final project; I'm leaving it as a reference for me to come back to some of these methods in the future.
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-```{r}
+```{r load-packages}
 #install.packages(gridExtra)
 library(tidyverse)
 library(broom)
@@ -21,7 +23,7 @@ library(GGally)
 library(gridExtra)
 library(tidymodels)
 ```
-```{r}
+```{r load-data}
 df <- read_csv("/cloud/project/data/df.csv")
 ```
 
