@@ -234,7 +234,10 @@ grid.arrange(p1, p2, p3, p4, p5, p6, p7, p8)
 ```{r boxplot-soilph-ft}
 df %>%
   ggplot(aes(x = site, y = soil.ph, fill = ft)) +
-  geom_boxplot()
+  geom_boxplot() +
+  labs(x = "Site",
+       y = "Soil pH",
+       fill = "Forest type")
 ```
 
 Boxplot of soil pH by site.  Boxes are colored per forest type ("TS" = Tsuga canadensis dominated (>50% BA), "MD" = mixed-deciduous forest (hemlock <25% BA)).  Hemlock dominated stands are consistently more acidic than mixed deciduous stands with some outliers.
@@ -242,20 +245,25 @@ Boxplot of soil pH by site.  Boxes are colored per forest type ("TS" = Tsuga can
 ```{r boxplot-ba-ft}
 df %>%
   ggplot(aes(x = site, y = ba, fill = ft)) +
-  geom_boxplot()
+  geom_boxplot() +
+  labs(x = "Basal area (m2/ha)",
+       y = "Site",
+       fill = "Forest type")
 ```
 
 Boxplot of basal area (m2/ha) by site.  Hemlock dominated sites have consistently higher BA than mixed deciduous sites.
 
 ```{r plot-vcwd-ba-ft}
 df %>%
-  ggplot(aes(y = vcwd, x = ba, color = ft)) +
+  ggplot(aes(y = vcwd, x = ba, color = ft, shape = ft)) +
   geom_jitter() +
   theme_bw() +
   labs(title = "Coarse Woody Debris and Basal Area",
-       subtitle = "By Forest Type",
+       subtitle = "By forest type",
        x = "Basal area (m2/ha)",
-       y = "CWD volume (m3)")
+       y = "CWD volume (m3)",
+       color = "Forest type",
+       shape = "Forest type")
 ```
 
 Coarse woody debris volume is higher in stands with lower basal area, which is reasonable given that areas that were recently affected by blowdown events should have higher CWD and lower BA, but very dense stands (high BA) should have less CWD.  Coloring the points by forest type, we see that it is primarily hemlock-dominated df that have high BA and low CWD, and hardwood sites have lower BA and higher CWD volume.

@@ -9,7 +9,7 @@ output: github_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## Load packages
+## Load Packages
 ```{r load-packages}
 #install.packages(gridExtra)
 library(tidyverse)
@@ -730,6 +730,19 @@ sp
 
 ```{r count-herp_species}
 sp %>%
+  group_by(herp_species) %>%
+  count(herp_species) %>%
+  arrange(desc(n))
+```
+```{r}
+sp %>%
+  filter(ft == "TS") %>%
+  group_by(herp_species) %>%
+  count(herp_species) %>%
+  arrange(desc(n))
+  
+sp %>%
+  filter(ft == "MD") %>%
   group_by(herp_species) %>%
   count(herp_species) %>%
   arrange(desc(n))
