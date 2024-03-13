@@ -447,9 +447,9 @@ svl_plot <- pc %>%
   theme(legend.position = "none")  +
   scale_fill_viridis_d()
 
-grid.arrange(wt_plot, tl_plot, svl_plot, top = textGrob("P. cinereus morphometrics by sex"))
+density_morpho_by_sex <- grid.arrange(wt_plot, tl_plot, svl_plot, top = textGrob("P. cinereus morphometrics by sex"))
 
-ggsave("morpho_density_by_sex.png")
+ggsave("density_morpho_by_sex.png",plot = density_morpho_by_sex)
 ```
 
 Density distributions for Plethodon cinereus weight (in centigrams), total and snout-vent length (in millimeters).  Females appear to be somewhat heavier and longer than males.  Observations with missing values removed.  Skew in total length but not snout-vent length may be due to salamanders with missing/regenerating tails.
@@ -504,9 +504,9 @@ box3 <- pc %>%
   theme(legend.position = "none") +
   annotate("text", x = 2.1, y = 56, label = "P = 0.019")
 
-grid.arrange(box1, box2, box3, ncol = 3, top = textGrob("P. cinereus morphometrics by sex"), bottom = textGrob("Sex"))
+boxplot_morpho_by_sex <- grid.arrange(box1, box2, box3, ncol = 3, top = textGrob("P. cinereus morphometrics by sex"), bottom = textGrob("Sex"))
 
-ggsave("boxplot_morpho_by_sex.png")
+ggsave("boxplot_morpho_by_sex.png", plot = boxplot_morpho_by_sex)
 ```
 
 #### By forest type
