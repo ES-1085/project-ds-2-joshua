@@ -69,7 +69,7 @@ library(tidymodels)
     ## ✖ dplyr::lag()         masks stats::lag()
     ## ✖ yardstick::spec()    masks readr::spec()
     ## ✖ recipes::step()      masks stats::step()
-    ## • Use suppressPackageStartupMessages() to eliminate package startup messages
+    ## • Learn how to get started at https://www.tidymodels.org/start/
 
 ``` r
 library(MASS)
@@ -658,7 +658,7 @@ p6 <- ggplot(df, aes(x = soil.ph)) +
   labs(x = "Soil pH",
        y = "")
 
-grid.arrange(p1, p2, p3, p4, p5, p6)
+hist_some_predictors <- grid.arrange(p1, p2, p3, p4, p5, p6)
 ```
 
     ## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.
@@ -674,11 +674,10 @@ grid.arrange(p1, p2, p3, p4, p5, p6)
 ![](analysis_files/figure-gfm/hist-some-predictors-1.png)<!-- -->
 
 ``` r
-ggsave("hist_some_predictors.png")
+ggsave("hist_some_predictors.png", plot = hist_some_predictors)
 ```
 
     ## Saving 7 x 5 in image
-    ## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.
 
 #### Assess relationships
 
@@ -729,13 +728,13 @@ p9 <- ggplot(df, aes(x = soil.ph, y = n_ind)) +
   labs(x = "Soil pH",
        y = "")
 
-grid.arrange(p1, p2, p3, p4, p5, p6, p7, p8, p9, top = grid::textGrob("Relationships between P. cinereus abundance and predictors"))
+scatterplots_abundance_predictors <- grid.arrange(p1, p2, p3, p4, p5, p6, p7, p8, p9, top = grid::textGrob("Relationships between P. cinereus abundance and predictors"))
 ```
 
 ![](analysis_files/figure-gfm/plot-relationships-1.png)<!-- -->
 
 ``` r
-ggsave("scatterplots_abundance_predictors.png")
+ggsave("scatterplots_abundance_predictors.png", plot = scatterplots_abundance_predictors)
 ```
 
 #### Hurdle model without interaction
@@ -1943,13 +1942,13 @@ svl_plot <- pc %>%
   theme(legend.position = "none")  +
   scale_fill_viridis_d()
 
-grid.arrange(wt_plot, tl_plot, svl_plot, top = textGrob("P. cinereus morphometrics by sex"))
+density_morpho_by_sex <- grid.arrange(wt_plot, tl_plot, svl_plot, top = textGrob("P. cinereus morphometrics by sex"))
 ```
 
 ![](analysis_files/figure-gfm/morpho-density-by-sex-1.png)<!-- -->
 
 ``` r
-ggsave("morpho_density_by_sex.png")
+ggsave("density_morpho_by_sex.png",plot = density_morpho_by_sex)
 ```
 
     ## Saving 7 x 5 in image
@@ -2053,13 +2052,13 @@ box3 <- pc %>%
   theme(legend.position = "none") +
   annotate("text", x = 2.1, y = 56, label = "P = 0.019")
 
-grid.arrange(box1, box2, box3, ncol = 3, top = textGrob("P. cinereus morphometrics by sex"), bottom = textGrob("Sex"))
+boxplot_morpho_by_sex <- grid.arrange(box1, box2, box3, ncol = 3, top = textGrob("P. cinereus morphometrics by sex"), bottom = textGrob("Sex"))
 ```
 
 ![](analysis_files/figure-gfm/boxplot-morpho-sex-1.png)<!-- -->
 
 ``` r
-ggsave("boxplot_morpho_by_sex.png")
+ggsave("boxplot_morpho_by_sex.png", plot = boxplot_morpho_by_sex)
 ```
 
     ## Saving 7 x 5 in image
@@ -2151,13 +2150,13 @@ box3 <- pc %>%
   theme(legend.position = "none") +
   annotate("text", x = 2.1, y = 56, label = "P = 0.035")
 
-grid.arrange(box1, box2, box3, ncol = 3, top = textGrob("P. cinereus morphometrics by forest type"), bottom = textGrob("Forest type"))
+boxplot_morpho_by_ft <- grid.arrange(box1, box2, box3, ncol = 3, top = textGrob("P. cinereus morphometrics by forest type"), bottom = textGrob("Forest type"))
 ```
 
 ![](analysis_files/figure-gfm/boxplot-morpho-ft-1.png)<!-- -->
 
 ``` r
-ggsave("boxplot_morpho_by_ft.png")
+ggsave("boxplot_morpho_by_ft.png", plot = boxplot_morpho_by_ft)
 ```
 
     ## Saving 7 x 5 in image
@@ -2202,21 +2201,21 @@ by another package.
 k2
 ```
 
-    ## K-means clustering with 2 clusters of sizes 74, 59
+    ## K-means clustering with 2 clusters of sizes 59, 74
     ## 
     ## Cluster means:
     ##           tl        svl         wt
-    ## 1 -0.5814381 -0.6162131 -0.6535593
-    ## 2  0.7292614  0.7728774  0.8197184
+    ## 1  0.7292614  0.7728774  0.8197184
+    ## 2 -0.5814381 -0.6162131 -0.6535593
     ## 
     ## Clustering vector:
-    ##   [1] 1 1 1 1 2 1 1 1 1 2 1 1 1 2 1 2 1 2 2 1 2 1 1 2 2 1 2 2 2 1 1 1 1 2 1 2 1
-    ##  [38] 2 1 1 2 1 1 1 1 1 2 2 1 2 2 2 2 1 2 1 2 1 2 1 1 1 1 2 2 2 2 1 1 2 2 1 2 2
-    ##  [75] 1 1 1 1 2 2 2 2 1 1 1 2 1 2 1 1 1 1 1 1 2 1 1 2 2 2 1 1 1 2 2 1 2 1 1 2 2
-    ## [112] 1 1 2 1 1 1 1 2 2 2 1 2 1 1 2 2 1 2 2 1 2 2
+    ##   [1] 2 2 2 2 1 2 2 2 2 1 2 2 2 1 2 1 2 1 1 2 1 2 2 1 1 2 1 1 1 2 2 2 2 1 2 1 2
+    ##  [38] 1 2 2 1 2 2 2 2 2 1 1 2 1 1 1 1 2 1 2 1 2 1 2 2 2 2 1 1 1 1 2 2 1 1 2 1 1
+    ##  [75] 2 2 2 2 1 1 1 1 2 2 2 1 2 1 2 2 2 2 2 2 1 2 2 1 1 1 2 2 2 1 1 2 1 2 2 1 1
+    ## [112] 2 2 1 2 2 2 2 1 1 1 2 1 2 2 1 1 2 1 1 2 1 1
     ## 
     ## Within cluster sum of squares by cluster:
-    ## [1] 135.7529  69.2575
+    ## [1]  69.2575 135.7529
     ##  (between_SS / total_SS =  48.2 %)
     ## 
     ## Available components:
@@ -2230,17 +2229,10 @@ p2 <- fviz_cluster(k3, geom = "point",  data = pc_means) + ggtitle("k = 3")
 p3 <- fviz_cluster(k4, geom = "point",  data = pc_means) + ggtitle("k = 4")
 p4 <- fviz_cluster(k5, geom = "point",  data = pc_means) + ggtitle("k = 5")
 
-
 grid.arrange(p1, p2,  p3, p4, nrow = 2)
 ```
 
 ![](analysis_files/figure-gfm/plot-k-means-1.png)<!-- -->
-
-``` r
-ggsave("cluster-k-means.png")
-```
-
-    ## Saving 7 x 5 in image
 
 ``` r
 fviz_nbclust(pc_means, kmeans, method = "wss")
