@@ -46,18 +46,12 @@ mass_towns <- st_transform(mass_towns, "+init=epsg:4326")
 state_map <- ggplot(mass_towns) +
   geom_sf() +
   geom_point(data = coords, (aes(x = long_dd, y = lat_dd)), alpha = 0.5) +
-  labs(x = "",
-       y = "") +
    theme_bw() +
   theme(panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank()) +
-   ggspatial::annotation_north_arrow(
-    location = "tr", which_north = "true",
-    pad_x = unit(0, "in"), pad_y = unit(0.2, "in"),
-    style = ggspatial::north_arrow_fancy_orienteering(
-      fill = c("grey40", "white"),
-      line_col = "grey20",
-      text_family = "ArcherPro Book")) +
+        panel.grid.minor = element_blank(),
+        axis.text = element_blank(),
+        axis.ticks = element_blank(),
+        axis.title = element_blank()) +
   ggspatial::annotation_scale(
     location = "bl",
     bar_cols = c("grey60", "white"),
@@ -66,11 +60,12 @@ state_map <- ggplot(mass_towns) +
 site_map <- ggplot(mass_towns) +
   geom_sf() +
   geom_point(data = coords, (aes(x = long_dd, y = lat_dd)), alpha = 0.5) +
-  labs(x = "Long",
-       y = "Lat",
+  labs(title = "Paired sites in north central Massachusetts",
+       x = "Longitude",
+       y = "Latitude",
        caption = "WGS 1984") +
-  xlim(-72.4, -71.85) +
-  ylim(42.4, 42.7) +
+  xlim(-72.43, -71.75) +
+  ylim(42.33, 42.7) +
   theme_bw() +
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank()) +
@@ -85,10 +80,21 @@ site_map <- ggplot(mass_towns) +
     location = "bl",
     bar_cols = c("grey60", "white"),
     text_family = "ArcherPro Book") +
-  annotate("text", x = c(-71.9, -72.12, -72.27, -72.12, -72.13, -72.09, -72.23, -72.36, -72.37, -72.38), y = c(42.52, 42.44, 42.49, 42.54, 42.62, 42.68, 42.69, 42.7, 42.66, 42.6), label = c("Mount Wachusett", "Slab City", "Tom Swamp", "Prospect Hill", "Millers River", "Beryl Hill", "Warwick SF", "Mount Grace SF", "Northfield SF", "Erving SF"))
+  annotate("text", x = c(-71.9, -72.12, -72.27, -72.1, -72.13, -72.08, -72.23, -72.36, -72.37, -72.38), y = c(42.52, 42.44, 42.49, 42.54, 42.61, 42.68, 42.66, 42.7, 42.66, 42.6), label = c("Mount Wachusett", "Slab City", "Tom Swamp", "Prospect Hill", "Millers River", "Beryl Hill", "Warwick SF", "Mount Grace SF", "Northfield SF", "Erving SF"))
 
-state_map
-site_map
+main.plot <- site_map
+
+inset.plot <- state_map
+
+map1 <-
+  ggdraw() +
+  draw_plot(main.plot) +
+  draw_plot(inset.plot, x = 0.585, y = .145, width = .3, height = .3)
+
+map1
+
+ggsave("sitemap.png")
+
 ```
 
 ## P. cinereus 
