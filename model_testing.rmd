@@ -9,7 +9,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-```{r}
+```{r load-packages}
 #install.packages(gridExtra)
 library(tidyverse)
 library(broom)
@@ -23,46 +23,46 @@ library(tidymodels)
 ```
 
 ## Load data
-```{r}
+```{r load-data}
 df <- read_csv("/cloud/project/data/df.csv")
 ```
 
 #### Hurdle model without interaction
 
-```{r}
+```{r hurdle-nb1}
 df1 <- na.omit(df)
 hurdle_nb1 <- hurdle(n_ind ~ ft + ts + ba + st.ha + canopy.cover + cwd.con + vcwd.con + avg.dc + tot.snags + avg.snag.dbh + soil.ph, data = df1, dist = "negbin")
 summary(hurdle_nb1)
 ```
 
 
-```{r}
+```{r stepwise-aic-hurdle-nb1}
 stepAIC(hurdle_nb1, direction = "both")
 ```
-```{r}
+```{r hurdle-nb2}
 hurdle_nb2 <- hurdle(n_ind ~ canopy.cover + avg.snag.dbh, data = df1, dist = "negbin")
 summary(hurdle_nb2)
 ```
 #### Hurdle model with forest type interaction
-```{r}
+```{r hurdle-nb3}
 hurdle_nb3 <- hurdle(n_ind ~ ft + ts + ba + st.ha + canopy.cover + cwd.con + vcwd.con + avg.dc + tot.snags + avg.snag.dbh + soil.ph + ft*ts + ts*ba + ts*soil.ph + ft*ba + ft*soil.ph, data = df1, dist = "negbin")
 summary(hurdle_nb3)
 ```
-```{r}
+```{r stepwise-aic-hurdle-nb3}
 stepAIC(hurdle_nb3, direction = "both")
 ```
 
 
 #### Hurdle model with multiple interaction
-```{r}
+```{r hurdle-nb4}
 hurdle_nb4 <- hurdle(n_ind ~ ft + ts + ba + st.ha + canopy.cover + cwd.con + vcwd.con + avg.dc + tot.snags + avg.snag.dbh + soil.ph + ft*ts + ts*ba + ts*soil.ph + ft*ba + ft*soil.ph + cwd.con * vcwd.con + st.ha * canopy.cover, data = df1, dist = "negbin")
 summary(hurdle_nb4)
 ```
-```{r}
+```{r stepwise-aic-hurdle-nb4}
 stepAIC(hurdle_nb4, direction = "both")
 ```
 
-```{r}
+```{r compare-aic-hurdle-models}
 library(AICcmodavg)
 models <- list(hurdle_nb1, hurdle_nb2, hurdle_nb3, hurdle_nb4)
 mod.names <- c('Env model full', 'Env model reduced', 'Env model ft interaction', 'Env model mult interactions')
@@ -72,13 +72,13 @@ Make table with `kable` of model comparisons.
 
 ### Predictive model
 Create binomial `presence` variable for logistic regression.
-```{r}
+```{r create-presence-var}
 df <- df %>%
   mutate(presence = as.factor(case_when(n_ind >= 1 ~ 1, n_ind == 0 ~ n_ind)))
 df
 ```
 
-```{r}
+```{r split-train-test-data}
 set.seed(117)
 
 abund_split <- initial_split(df, prop = 0.8)
@@ -87,35 +87,35 @@ train_data <- training(abund_split)
 test_data <- testing(abund_split)
 ```
 
-```{r}
+```{r glimpse-data}
 glimpse(train_data)
 glimpse(test_data)
 ```
 Consider downsampling here.
 
-```{r}
+```{r fit-log-reg-presence-canopy.cover-avg.snag.dbh}
 log_fit_presence <- logistic_reg(engine = "glm") %>%
   fit(presence ~ canopy.cover + avg.snag.dbh, data = train_data, family = "binomial")
 ```
 
-```{r}
+```{r predict-log-reg}
 predict(log_fit_presence, test_data)
 ```
 
-```{r}
+```{r predict-presence}
 presence_pred <- predict(log_fit_presence, test_data, type = "prob") %>%
   bind_cols(test_data %>% dplyr::select(presence, canopy.cover))
 presence_pred
 ```
 
-```{r}
+```{r arrange-predicted-presence}
 presence_pred %>%
   arrange(desc(.pred_1)) %>%
   print(n = 10)
 ```
 
 
-```{r}
+```{r plot-roc-curve}
 presence_pred %>%
   roc_curve(
     truth = presence,
@@ -126,5 +126,5 @@ presence_pred %>%
 
 
 ```
-Not a good fit.
+Not a particularly good fit.  My thinking is that since the zero-inflated count/presence absence data does not meet some of the assumptions of the logistic regression, this model doesn't explain the data particularly well.  The data better matches the assumptions of the final hurdle model.
 
