@@ -126,6 +126,8 @@ ggplot(mass_towns) +
   labs(x = "Long",
        y = "Lat") +
   theme_bw() +
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank()) +
   ggspatial::annotation_north_arrow(
     location = "tr", which_north = "true",
     pad_x = unit(0, "in"), pad_y = unit(0.2, "in"),

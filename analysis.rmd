@@ -34,7 +34,63 @@ plots <- read_csv("/cloud/project/data/hf131-01-plot.csv")
 aco <- read_csv("/cloud/project/data/hf131-04-aco.csv")
 pc <- read_csv("/cloud/project/data/hf131-05-pc-abund.csv")
 herps <- read_csv("/cloud/project/data/hf131-06-herps.csv")
+mass_towns <- st_read("/cloud/project/data/Community Boundaries (Towns) from Survey Points.shp")
+coords <- read_csv("/cloud/project/data/coords.csv")
 ```
+## Map plots
+```{r transform-crs-mass_towns}
+mass_towns <- st_transform(mass_towns, "+init=epsg:4326")
+```
+
+```{r plot-mass_towns-coords}
+state_map <- ggplot(mass_towns) +
+  geom_sf() +
+  geom_point(data = coords, (aes(x = long_dd, y = lat_dd)), alpha = 0.5) +
+  labs(x = "",
+       y = "") +
+   theme_bw() +
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank()) +
+   ggspatial::annotation_north_arrow(
+    location = "tr", which_north = "true",
+    pad_x = unit(0, "in"), pad_y = unit(0.2, "in"),
+    style = ggspatial::north_arrow_fancy_orienteering(
+      fill = c("grey40", "white"),
+      line_col = "grey20",
+      text_family = "ArcherPro Book")) +
+  ggspatial::annotation_scale(
+    location = "bl",
+    bar_cols = c("grey60", "white"),
+    text_family = "ArcherPro Book")
+
+site_map <- ggplot(mass_towns) +
+  geom_sf() +
+  geom_point(data = coords, (aes(x = long_dd, y = lat_dd)), alpha = 0.5) +
+  labs(x = "Long",
+       y = "Lat",
+       caption = "WGS 1984") +
+  xlim(-72.4, -71.85) +
+  ylim(42.4, 42.7) +
+  theme_bw() +
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank()) +
+   ggspatial::annotation_north_arrow(
+    location = "tr", which_north = "true",
+    pad_x = unit(0, "in"), pad_y = unit(0.2, "in"),
+    style = ggspatial::north_arrow_fancy_orienteering(
+      fill = c("grey40", "white"),
+      line_col = "grey20",
+      text_family = "ArcherPro Book")) +
+  ggspatial::annotation_scale(
+    location = "bl",
+    bar_cols = c("grey60", "white"),
+    text_family = "ArcherPro Book") +
+  annotate("text", x = c(-71.9, -72.12, -72.27, -72.12, -72.13, -72.09, -72.23, -72.36, -72.37, -72.38), y = c(42.52, 42.44, 42.49, 42.54, 42.62, 42.68, 42.69, 42.7, 42.66, 42.6), label = c("Mount Wachusett", "Slab City", "Tom Swamp", "Prospect Hill", "Millers River", "Beryl Hill", "Warwick SF", "Mount Grace SF", "Northfield SF", "Erving SF"))
+
+state_map
+site_map
+```
+
 ## P. cinereus 
 ### Calculate  per cover board
 
